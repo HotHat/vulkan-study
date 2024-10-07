@@ -734,7 +734,9 @@ void HelloTriangle::createCommandBuffers() {
             VkBuffer vertexBuffers[] = { vertexBuffer_ };
             VkDeviceSize offsets[] = { 0 };
             vkCmdBindVertexBuffers(commandBuffers_[i], 0, 1, vertexBuffers, offsets);
-            vkCmdDraw(commandBuffers_[i], static_cast<uint32_t>(g_vertices.size()), 1, 0, 0);
+            vkCmdBindIndexBuffer(commandBuffers_[i], indexBuffer_, 0, VK_INDEX_TYPE_UINT16);
+            // vkCmdDraw(commandBuffers_[i], static_cast<uint32_t>(g_vertices.size()), 1, 0, 0);
+            vkCmdDrawIndexed(commandBuffers_[i], static_cast<uint32_t>(g_indices.size()), 1, 0, 0, 0);
             //vkCmdDraw(commandBuffer, 3, 1, 0, 0);
         vkCmdEndRenderPass(commandBuffers_[i]);
 
@@ -814,6 +816,39 @@ void HelloTriangle::createSyncObjects() {
 
     //
     copyBuffer(stagingBuffer, vertexBuffer_, bufferSize);
+    vkDestroyBuffer(device_, stagingBuffer, nullptr);
+    vkFreeMemory(device_, stagingBufferMemory, nullptr);
+}
+
+
+void HelloTriangle::createIndexBuffer() {
+    VkDeviceSize bufferSize = sizeof(g_indices[0]) * static_cast<uint32_t>(g_indices.size());
+
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+
+    createBuffer(
+        bufferSize,
+        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        stagingBuffer,
+        stagingBufferMemory);
+
+    void* data;
+    vkMapMemory(device_, stagingBufferMemory, 0, bufferSize, 0, &data);
+        memcpy(data, g_indices.data(), bufferSize);
+    vkUnmapMemory(device_, stagingBufferMemory);
+
+    createBuffer(
+        bufferSize,
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        indexBuffer_,
+       indexBufferMemory_
+    );
+
+    //
+    copyBuffer(stagingBuffer, indexBuffer_, bufferSize);
     vkDestroyBuffer(device_, stagingBuffer, nullptr);
     vkFreeMemory(device_, stagingBufferMemory, nullptr);
 }
@@ -992,6 +1027,7 @@ void HelloTriangle::initVulkan() {
 
     createCommandPool();
     createVertexBuffer();
+    createIndexBuffer();
     createCommandBuffers();
 
     createSyncObjects();
@@ -1072,6 +1108,8 @@ void HelloTriangle::cleanup() {
 
     vkDestroyBuffer(device_, vertexBuffer_, nullptr);
     vkFreeMemory(device_, vertexBufferMemory_, nullptr);
+    vkDestroyBuffer(device_, indexBuffer_, nullptr);
+    vkFreeMemory(device_, indexBufferMemory_, nullptr);
 
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         vkDestroySemaphore(device_, renderFinishedSemaphores_[i], nullptr);

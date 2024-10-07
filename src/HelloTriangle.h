@@ -83,18 +83,23 @@ struct Vertex {
 };
 
 const std::vector<Vertex> g_vertices = {
-    {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-    {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
-    {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+    {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+    {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+    {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+    {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}},
 
-    {{  -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-    {{0.0f, 0.5f}, {0.0f, 0.0f, 1.0f}},
-    {{-1.0f, 0.5f}, {0.0f, 1.0f, 0.0f}},
+    // {{  -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+    // {{0.0f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+    // {{-1.0f, 0.5f}, {0.0f, 1.0f, 0.0f}},
 
-    {{  0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-    {{1.0f, 0.5f}, {0.0f, 1.0f, 0.0f}},
-    {{0.0f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+    // {{  0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+    // {{1.0f, 0.5f}, {0.0f, 1.0f, 0.0f}},
+    // {{0.0f, 0.5f}, {0.0f, 0.0f, 1.0f}},
 
+};
+
+const std::vector<uint16_t> g_indices = {
+    0, 1, 2, 2, 3, 0
 };
 
 class HelloTriangle {
@@ -160,6 +165,9 @@ private:
     // vertex buffer
     VkBuffer vertexBuffer_ = VK_NULL_HANDLE;
     VkDeviceMemory vertexBufferMemory_ = VK_NULL_HANDLE;
+    // vertex index
+    VkBuffer indexBuffer_ = VK_NULL_HANDLE;
+    VkDeviceMemory indexBufferMemory_ = VK_NULL_HANDLE;
 
     uint32_t currentFrame_ = 0;
 
@@ -195,6 +203,7 @@ private:
     void createCommandBuffers();
     void createSyncObjects();
     void createVertexBuffer();
+    void createIndexBuffer();
     void drawFrame();
 
     // vulkan functions
