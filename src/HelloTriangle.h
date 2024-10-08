@@ -6,6 +6,7 @@
 #include <GLFW/glfw3.h>
 #include <vulkan/vulkan.h>
 #include <glm/glm.hpp>
+#include <glm/ext.hpp>
 
 #include <vector>
 #include <array>
@@ -52,6 +53,12 @@ struct SwapChainData {
     std::vector<VkImageView> swapChainImageViews;
     VkFormat swapChainImageFormat;
     VkExtent2D swapChainExtent;
+};
+
+struct UniformBufferObject {
+    alignas(16) glm::mat4 model;
+    alignas(16) glm::mat4 view;
+    alignas(16) glm::mat4 proj;
 };
 
 struct Vertex {
@@ -152,6 +159,7 @@ private:
 
     VkRenderPass renderPass_ = VK_NULL_HANDLE;
     VkPipelineLayout pipelineLayout_ = VK_NULL_HANDLE;
+    VkDescriptorSetLayout descriptorSetLayout_ = VK_NULL_HANDLE;
     VkPipeline graphicsPipeline_ = VK_NULL_HANDLE;
     std::vector<VkFramebuffer> swapChainFramebuffers_;
     VkCommandPool commandPool_ = VK_NULL_HANDLE;
@@ -168,6 +176,14 @@ private:
     // vertex index
     VkBuffer indexBuffer_ = VK_NULL_HANDLE;
     VkDeviceMemory indexBufferMemory_ = VK_NULL_HANDLE;
+
+    // uniform
+    std::vector<VkBuffer> uniformBuffers_;
+    std::vector<VkDeviceMemory> uniformBuffersMemory_;
+    std::vector<void*> uniformBuffersMapped_;
+    VkDescriptorPool descriptorPool_ = VK_NULL_HANDLE;
+    std::vector<VkDescriptorSet> descriptorSets_;
+
 
     uint32_t currentFrame_ = 0;
 
@@ -186,6 +202,7 @@ private:
     void recordCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t imageIndex);
     void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
     void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+    void updateUniformBuffer(uint32_t imageIndex);
 
     //
     void createInstance();
@@ -197,6 +214,9 @@ private:
     void recreateSwapChain();
     void createImageViews();
     void createRenderPass();
+    void createDescriptorPool();
+    void createDescriptorSets();
+    void createDescriptorSetLayout();
     void createGraphicsPipeline();
     void createFrameBuffers();
     void createCommandPool();
@@ -204,6 +224,7 @@ private:
     void createSyncObjects();
     void createVertexBuffer();
     void createIndexBuffer();
+    void createUniformBuffer();
     void drawFrame();
 
     // vulkan functions
