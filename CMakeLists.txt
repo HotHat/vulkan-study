@@ -24,6 +24,13 @@ target_link_libraries(triangle
 
 add_custom_command(TARGET vulkan POST_BUILD
         COMMAND  ${CMAKE_COMMAND} ARGS -E make_directory ${CMAKE_BINARY_DIR}/shaders)
+add_custom_command(TARGET vulkan POST_BUILD
+        COMMAND  ${CMAKE_COMMAND} ARGS -E make_directory ${CMAKE_BINARY_DIR}/textures)
+
+add_custom_command(TARGET vulkan POST_BUILD
+        COMMAND  ${CMAKE_COMMAND} ARGS -E copy
+        ${CMAKE_SOURCE_DIR}/textures/texture.jpg
+        ${CMAKE_BINARY_DIR}/textures/texture.jpg)
 
 add_custom_command(TARGET vulkan POST_BUILD
         COMMAND C:/VulkanSDK/Bin/glslc ${CMAKE_SOURCE_DIR}/shaders/shader.vert -o ${CMAKE_BINARY_DIR}/shaders/vert.spv)
