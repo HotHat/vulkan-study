@@ -6,9 +6,16 @@ set(CMAKE_CXX_STANDARD 20)
 add_executable(vulkan src/main.cpp
         src/HelloTriangle.h
         src/HelloTriangle.cpp
-        )
+)
 
-add_executable(triangle src/main2.cpp)
+
+set(VK_INFO
+        src/main3.cpp
+        src/VkInfo.cpp
+        src/VkInfo.h
+)
+add_executable(triangle src/main2.cpp )
+
 
 target_include_directories(vulkan PUBLIC C:/VulkanSDK/Include)
 
@@ -37,3 +44,12 @@ add_custom_command(TARGET vulkan POST_BUILD
 
 add_custom_command(TARGET vulkan POST_BUILD
         COMMAND  C:/VulkanSDK/Bin/glslc ${CMAKE_SOURCE_DIR}/shaders/shader.frag -o ${CMAKE_BINARY_DIR}/shaders/frag.spv)
+
+
+# vulkan info
+add_executable(vk_info ${VK_INFO})
+target_include_directories(vk_info PUBLIC C:/VulkanSDK/Include)
+target_link_libraries(vk_info
+        C:/VulkanSDK/Lib/vulkan-1.lib
+        C:/VulkanSDK/Lib/glfw/glfw3.lib
+)
