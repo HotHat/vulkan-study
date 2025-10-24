@@ -12,7 +12,8 @@ add_executable(vulkan src/main.cpp
 set(VK_INFO
         src/main3.cpp
         src/VkInfo.cpp
-        src/VkInfo.h
+        src/LkInstance.cpp
+        src/LkDevice.cpp
 )
 add_executable(triangle src/main2.cpp )
 

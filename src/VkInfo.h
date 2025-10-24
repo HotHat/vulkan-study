@@ -25,10 +25,25 @@ private:
 
     void CreateInstance();
 
+    void PhysicalDevices();
+    void PhysicalDeviceProperties(const VkPhysicalDevice & physicalDevice);
+    void PhysicalDeviceQueueFamilyProperties(uint8_t index, const VkPhysicalDevice & physicalDevice);
+    void PhysicalDeviceExtensionProperties(uint8_t index, const VkPhysicalDevice & physicalDevice);
+
+    void CreateDevice();
+
 private:
     std::vector<VkLayerProperties> layerProperties;
     std::map<std::string, std::vector<VkExtensionProperties>> layerExtensionProperties;
     VkInstance instance = VK_NULL_HANDLE;
+
+    //
+    std::vector<VkPhysicalDevice> physicalDevices;
+    std::map<uint8_t, std::vector<VkQueueFamilyProperties>> deviceQueueFamilyProperties;
+    // std::map<uint8_t, std::vector<VkExtensionProperties>> deviceExtension;
+
+    //
+    VkDevice device;
 
     VkDebugUtilsMessengerEXT debugMessenger;
 };
