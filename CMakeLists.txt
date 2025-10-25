@@ -14,6 +14,9 @@ set(VK_INFO
         src/VkInfo.cpp
         src/LkInstance.cpp
         src/LkDevice.cpp
+        src/vk.h
+        src/LkSwapChain.cpp
+        src/LkSwapChain.h
 )
 add_executable(triangle src/main2.cpp )
 

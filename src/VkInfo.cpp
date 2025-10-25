@@ -3,23 +3,42 @@
 //
 
 #include "VkInfo.h"
-#include <vulkan/vulkan.h>
+
 #include <iostream>
 #include <GLFW/glfw3.h>
 
 void VkInfo::Run() {
+    instance_.PrintVersion();
+    instance_.EnableValidation();
+    instance_.CreateInstance(
+        {
+            "VK_LAYER_KHRONOS_validation"
+        }, {
+            VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
+           "VK_KHR_surface"
+        }
+    );
 
-    Version();
-    LayerProperties();
+    uint32_t deviceIndex = instance_.PickPhysicDevice();
 
-    CreateInstance();
-    PhysicalDevices();
+    std::cout << "Device index: " << deviceIndex << std::endl;
+    // Version();
+    // LayerProperties();
+    //
+    // CreateInstance();
+    // PhysicalDevices();
+    //
+    // CreateDevice(0);
+}
 
-    CreateDevice();
+void VkInfo::CreateSurface() {
+    if (glfwCreateWindowSurface(instance_.GetInstance(), window_, nullptr, &surface_) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create window surface!");
+    }
 }
 
 
-
+/*
 void VkInfo::LayerProperties() {
     uint32_t count;
     // std::vector<>
@@ -176,13 +195,13 @@ void VkInfo::PhysicalDevices() {
 
         int index = 0;
         for (const auto device: physicalDevices) {
-            index++;
             std::cout << "physical device index: " << index << "\n";
             PhysicalDeviceProperties(device);
             //
             PhysicalDeviceQueueFamilyProperties(index, device);
             //
             PhysicalDeviceExtensionProperties(index, device);
+            index++;
         }
     }
 }
@@ -232,11 +251,13 @@ void VkInfo::PhysicalDeviceQueueFamilyProperties(uint8_t index, const VkPhysical
     deviceQueueFamilyProperties[index] = std::move(props);
 }
 
-void VkInfo::CreateDevice() {
-    //
-    int physicalDeviceIndex = 0;
+void VkInfo::CreateDevice(int physicalDeviceIndex) {
 
     VkPhysicalDevice physicalDevice = physicalDevices[physicalDeviceIndex];
+    if (deviceQueueFamilyProperties[physicalDeviceIndex].empty()) {
+        throw std::runtime_error("physicalDeviceIndex: " + std::to_string(physicalDeviceIndex) + ", No device queue family found");
+    }
+    uint32_t queueFamilyIndex = 0;
 
     std::vector<const char *> extensions {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME,
@@ -247,7 +268,7 @@ void VkInfo::CreateDevice() {
             .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
             .pNext = nullptr,
             .flags = 0,
-            .queueFamilyIndex = 0,
+            .queueFamilyIndex = queueFamilyIndex,
             .queueCount = 1,
             .pQueuePriorities = &queuePriority
     };
@@ -290,3 +311,4 @@ void VkInfo::PhysicalDeviceExtensionProperties(uint8_t index, VkPhysicalDevice c
 
 
 }
+*/
