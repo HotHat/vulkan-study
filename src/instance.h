@@ -96,6 +96,9 @@ public:
         return EnableExtensions(extensions.size(), extensions.data());
     }
 
+    // Add extensions to be enabled. Will fail to create an instance if the extension aren't available.
+    InstanceBuilder& EnableAvailableExtensions(size_t count, const char* const* extensions);
+
     // Headless Mode does not load the required extensions for presentation. Defaults to true.
     InstanceBuilder& SetHeadless(bool headless = true);
 
@@ -150,6 +153,8 @@ private:
         // VkInstanceCreateInfo
         std::vector<const char*> layers;
         std::vector<const char*> extensions;
+        std::vector<const char*> available_extensions;
+
         VkInstanceCreateFlags flags = static_cast<VkInstanceCreateFlags>(0);
         std::vector<VkLayerSettingEXT> layer_settings;
 

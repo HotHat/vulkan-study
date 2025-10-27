@@ -28,11 +28,13 @@ int main() {
         std::cout << extensions[i] << "\n";
     }
 
-    // lvk::InstanceBuilder builder;
-    // auto instance = builder.SetAppName("Example Vulkan Application")
-    //         .RequestValidationLayers ()
-    //         .UseDefaultDebugMessenger ()
-    //         .build ();
+    lvk::InstanceBuilder builder;
+    auto instance = builder.SetAppName("Example Vulkan Application")
+            .EnableAvailableExtensions(count, extensions)
+            .RequestValidationLayers ()
+            .EnableExtensions(count, extensions)
+            .UseDefaultDebugMessenger ()
+            .build ();
 
     return EXIT_SUCCESS;
 }

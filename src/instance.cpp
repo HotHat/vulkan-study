@@ -99,9 +99,19 @@ Instance InstanceBuilder::build() const {
 #endif
     if (!info.headless_context) {
         auto check_add_window_ext = [&](const char* name) -> bool {
-            if (!system.CheckExtensionSupported(name)) return false;
-            extensions.push_back(name);
-            return true;
+            if (system.CheckExtensionSupported(name)) {
+                extensions.push_back(name);
+                return true;
+            }
+
+            if (info.available_extensions.empty()) return false;
+            for (const auto &extension: info.available_extensions) {
+                if (strcmp(name, extension) == 0) {
+                    extensions.push_back(name);
+                    return true;
+                }
+            }
+            return false;
         };
         bool khr_surface_added = check_add_window_ext("VK_KHR_surface");
 #if defined(_WIN32)
@@ -346,5 +356,13 @@ InstanceBuilder& InstanceBuilder::AddLayerSetting(VkLayerSettingEXT setting) {
     info.layer_settings.push_back(setting);
     return *this;
 }
+
+InstanceBuilder &InstanceBuilder::EnableAvailableExtensions(size_t count, const char *const *extensions) {
+    for (int i = 0; i < count; ++i) {
+        info.available_extensions.push_back(extensions[i]);
+    }
+    return *this;
+}
+
 
 } // end namespace lvk
