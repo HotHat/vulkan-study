@@ -9,12 +9,7 @@ add_executable(vulkan src/main.cpp
 )
 
 
-set(VK_INFO
-        src/main3.cpp
-        src/VkInfo.cpp
-        src/LkInstance.cpp
-        src/LkDevice.cpp
-)
+
 add_executable(triangle src/main2.cpp )
 
 
@@ -48,9 +43,30 @@ add_custom_command(TARGET vulkan POST_BUILD
 
 
 # vulkan info
+set(VK_INFO
+        src/main3.cpp
+        src/VkInfo.cpp
+        src/LkInstance.cpp
+        src/LkDevice.cpp
+)
+
 add_executable(vk_info ${VK_INFO})
 target_include_directories(vk_info PUBLIC C:/VulkanSDK/Include)
 target_link_libraries(vk_info
+        C:/VulkanSDK/Lib/vulkan-1.lib
+        C:/VulkanSDK/Lib/glfw/glfw3.lib
+)
+
+set(VK_INFO2
+        src/main4.cpp
+        src/functions.cpp
+        src/system_info.cpp
+        src/instance.cpp
+)
+
+add_executable(vk_info2 ${VK_INFO2})
+target_include_directories(vk_info2 PUBLIC C:/VulkanSDK/Include)
+target_link_libraries(vk_info2
         C:/VulkanSDK/Lib/vulkan-1.lib
         C:/VulkanSDK/Lib/glfw/glfw3.lib
 )
