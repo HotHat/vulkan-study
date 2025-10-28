@@ -71,7 +71,7 @@ set(VK_INFO2
         src/system_info.cpp
         src/instance.cpp
         src/physical_device.cpp
-        src/physical_device.h
+        src/feature_chain.cpp
 )
 
 add_executable(vk_info2 ${VK_INFO2})

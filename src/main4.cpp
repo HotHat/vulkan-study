@@ -3,10 +3,12 @@
 //
 
 #include <iostream>
+#define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
 #include "system_info.h"
 #include "instance.h"
+#include "physical_device.h"
 
 
 int main() {
@@ -35,6 +37,18 @@ int main() {
             .EnableExtensions(count, extensions)
             .UseDefaultDebugMessenger ()
             .Build ();
+
+    VkSurfaceKHR surface = VK_NULL_HANDLE;
+    VkResult glfw_result = glfwCreateWindowSurface(instance.instance, window_, nullptr, &surface);
+    if (glfw_result != VK_SUCCESS) {
+        std::cerr << "Failed to select create window surface. Error: " << std::to_string(glfw_result) << "\n";
+        return EXIT_FAILURE;
+    }
+
+    lvk::PhysicalDeviceSelector selector{ instance };
+    auto physical_device = selector.SetSurface(surface).Select();
+
+    std::cout << "Success to select physical device: " << physical_device.name << "\n";
 
     return EXIT_SUCCESS;
 }

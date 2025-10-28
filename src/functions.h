@@ -7,9 +7,12 @@
 #include <vulkan/vulkan.h>
 #include <vector>
 #include <assert.h>
+#include <string>
 
 namespace lvk {
 
+
+inline const uint32_t QUEUE_INDEX_MAX_VALUE = UINT32_MAX;
 
 const char *to_string_message_severity(VkDebugUtilsMessageSeverityFlagBitsEXT s);
 
@@ -65,5 +68,57 @@ VkResult create_debug_utils_messenger(VkInstance instance,
                                       void* user_data_pointer,
                                       VkDebugUtilsMessengerEXT* pDebugMessenger,
                                       VkAllocationCallbacks* allocation_callbacks);
+
+// Helper for robustly executing the two-call pattern
+template <typename T, typename F, typename... Ts> auto get_vector(std::vector<T>& out, F&& f, Ts&&... ts) -> VkResult {
+    uint32_t count = 0;
+    VkResult err;
+    do {
+        err = f(ts..., &count, nullptr);
+        if (err != VK_SUCCESS) {
+            return err;
+        };
+        out.resize(count);
+        err = f(ts..., &count, out.data());
+        out.resize(count);
+    } while (err == VK_INCOMPLETE);
+    return err;
+}
+
+template <typename T, typename F, typename... Ts> auto get_vector_noerror(F&& f, Ts&&... ts) -> std::vector<T> {
+    uint32_t count = 0;
+    std::vector<T> results;
+    f(ts..., &count, nullptr);
+    results.resize(count);
+    f(ts..., &count, results.data());
+    results.resize(count);
+    return results;
+}
+
+std::vector<std::string> find_unsupported_extensions_in_list(
+        std::vector<std::string> const& available_extensions, std::vector<std::string> const& required_extensions);
+
+// Finds the first queue which supports the desired operations. Returns QUEUE_INDEX_MAX_VALUE if none is found
+uint32_t get_first_queue_index(std::vector<VkQueueFamilyProperties> const& families, VkQueueFlags desired_flags);
+// Finds the queue which is separate from the graphics queue and has the desired flag and not the
+// undesired flag, but will select it if no better options are available compute support. Returns
+// QUEUE_INDEX_MAX_VALUE if none is found.
+uint32_t get_separate_queue_index(
+        std::vector<VkQueueFamilyProperties> const& families, VkQueueFlags desired_flags, VkQueueFlags undesired_flags);
+
+// finds the first queue which supports only the desired flag (not graphics or transfer). Returns QUEUE_INDEX_MAX_VALUE if none is found.
+uint32_t get_dedicated_queue_index(
+        std::vector<VkQueueFamilyProperties> const& families, VkQueueFlags desired_flags, VkQueueFlags undesired_flags);
+
+// finds the first queue which supports presenting. returns QUEUE_INDEX_MAX_VALUE if none is found
+uint32_t get_present_queue_index(
+        VkPhysicalDevice const phys_device, VkSurfaceKHR const surface, std::vector<VkQueueFamilyProperties> const& families);
+
+template<typename T>
+T get_instance_proc_addr(VkInstance instance, const char *fun) {
+    auto tmp = vkGetInstanceProcAddr(instance, fun);
+    return reinterpret_cast<T>(tmp);
+}
+
 } // end of namespace lvk
 #endif //LVK_FUNCTIONS_H

@@ -9,22 +9,22 @@
 namespace lvk {
 
 Instance::operator VkInstance() const {
-    return instance_;
+    return instance;
 }
 
-Instance::~Instance() {
-    if (instance_ != VK_NULL_HANDLE) {
-        if (debug_messenger_ != VK_NULL_HANDLE)
-            destroy_debug_utils_messenger(instance_, debug_messenger_, allocation_callbacks_);
-        vkDestroyInstance(instance_, allocation_callbacks_);
-    }
-}
+// Instance::~Instance() {
+//     if (instance_ != VK_NULL_HANDLE) {
+//         if (debug_messenger_ != VK_NULL_HANDLE)
+//             destroy_debug_utils_messenger(instance_, debug_messenger_, allocation_callbacks_);
+//         vkDestroyInstance(instance_, allocation_callbacks_);
+//     }
+// }
 
 // InstanceBuilder
 
 InstanceBuilder::InstanceBuilder() = default;
 
-Instance InstanceBuilder::build() const {
+Instance InstanceBuilder::Build() const {
 
     auto system = SystemInfo::get_system_info();
 
@@ -206,29 +206,29 @@ Instance InstanceBuilder::build() const {
 #endif
 
     Instance instance;
-    VkResult res = vkCreateInstance(&instance_create_info, info.allocation_callbacks, &instance.instance_);
+    VkResult res = vkCreateInstance(&instance_create_info, info.allocation_callbacks, &instance.instance);
     if (res != VK_SUCCESS) {
         throw std::runtime_error("failed_create_instance");
     }
 
     if (info.use_debug_messenger) {
-        res = create_debug_utils_messenger(instance.instance_,
+        res = create_debug_utils_messenger(instance.instance,
                                            info.debug_callback,
                                            info.debug_message_severity,
                                            info.debug_message_type,
                                            info.debug_user_data_pointer,
-                                           &instance.debug_messenger_,
+                                           &instance.debug_messenger,
                                            info.allocation_callbacks);
         if (res != VK_SUCCESS) {
             throw std::runtime_error("failed_create_debug_messenger");
         }
     }
 
-    instance.headless_ = info.headless_context;
-    instance.properties2_ext_enabled_ = properties2_ext_enabled;
-    instance.allocation_callbacks_ = info.allocation_callbacks;
-    instance.instance_version_ = instance_version;
-    instance.api_version_ = api_version;
+    instance.headless = info.headless_context;
+    instance.properties2_ext_enabled = properties2_ext_enabled;
+    instance.allocation_callbacks = info.allocation_callbacks;
+    instance.instance_version = instance_version;
+    instance.api_version = api_version;
     // instance.fp_vkGetInstanceProcAddr_ = detail::vulkan_functions().ptr_vkGetInstanceProcAddr;
     // instance.fp_vkGetDeviceProcAddr_ = detail::vulkan_functions().fp_vkGetDeviceProcAddr;
     return instance;
@@ -357,7 +357,7 @@ InstanceBuilder& InstanceBuilder::AddLayerSetting(VkLayerSettingEXT setting) {
     return *this;
 }
 
-InstanceBuilder &InstanceBuilder::EnableAvailableExtensions(size_t count, const char *const *extensions) {
+InstanceBuilder &InstanceBuilder::AddAvailableExtensions(size_t count, const char *const *extensions) {
     for (int i = 0; i < count; ++i) {
         info.available_extensions.push_back(extensions[i]);
     }

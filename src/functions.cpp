@@ -4,7 +4,7 @@
 
 #include <cassert>
 #include "functions.h"
-
+#include <algorithm>
 
 namespace lvk {
 
@@ -70,6 +70,69 @@ void destroy_debug_utils_messenger(
     if (func != nullptr) {
         return func(instance, debugMessenger, allocation_callbacks);
     }
+}
+
+std::vector<std::string> find_unsupported_extensions_in_list(
+        std::vector<std::string> const& available_extensions, std::vector<std::string> const& required_extensions) {
+        std::vector<std::string> unavailable_extensions;
+
+        for (auto& req_ext : required_extensions) {
+            if (!std::binary_search(available_extensions.begin(), available_extensions.end(), req_ext)) {
+                unavailable_extensions.push_back(req_ext);
+            }
+        }
+        return unavailable_extensions;
+}
+
+// Finds the first queue which supports the desired operations. Returns QUEUE_INDEX_MAX_VALUE if none is found
+uint32_t get_first_queue_index(std::vector<VkQueueFamilyProperties> const& families, VkQueueFlags desired_flags) {
+    for (uint32_t i = 0; i < static_cast<uint32_t>(families.size()); i++) {
+        if ((families[i].queueFlags & desired_flags) == desired_flags) return i;
+    }
+    return QUEUE_INDEX_MAX_VALUE;
+}
+// Finds the queue which is separate from the graphics queue and has the desired flag and not the
+// undesired flag, but will select it if no better options are available compute support. Returns
+// QUEUE_INDEX_MAX_VALUE if none is found.
+uint32_t get_separate_queue_index(
+        std::vector<VkQueueFamilyProperties> const& families, VkQueueFlags desired_flags, VkQueueFlags undesired_flags) {
+    uint32_t index = QUEUE_INDEX_MAX_VALUE;
+    for (uint32_t i = 0; i < static_cast<uint32_t>(families.size()); i++) {
+        if ((families[i].queueFlags & desired_flags) == desired_flags && ((families[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) == 0)) {
+            if ((families[i].queueFlags & undesired_flags) == 0) {
+                return i;
+            } else {
+                index = i;
+            }
+        }
+    }
+    return index;
+}
+
+// finds the first queue which supports only the desired flag (not graphics or transfer). Returns QUEUE_INDEX_MAX_VALUE if none is found.
+uint32_t get_dedicated_queue_index(
+        std::vector<VkQueueFamilyProperties> const& families, VkQueueFlags desired_flags, VkQueueFlags undesired_flags) {
+    for (uint32_t i = 0; i < static_cast<uint32_t>(families.size()); i++) {
+        if ((families[i].queueFlags & desired_flags) == desired_flags &&
+            (families[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) == 0 && (families[i].queueFlags & undesired_flags) == 0)
+            return i;
+    }
+    return QUEUE_INDEX_MAX_VALUE;
+}
+
+// finds the first queue which supports presenting. returns QUEUE_INDEX_MAX_VALUE if none is found
+uint32_t get_present_queue_index(
+        VkPhysicalDevice phys_device, VkSurfaceKHR surface, std::vector<VkQueueFamilyProperties> const& families) {
+    for (uint32_t i = 0; i < static_cast<uint32_t>(families.size()); i++) {
+        VkBool32 presentSupport = VK_FALSE;
+        if (surface != VK_NULL_HANDLE) {
+            VkResult res = vkGetPhysicalDeviceSurfaceSupportKHR(phys_device, i, surface, &presentSupport);
+            if (res != VK_SUCCESS) return QUEUE_INDEX_MAX_VALUE; // TODO: determine if this should fail another way
+        }
+        if (presentSupport == VK_TRUE) return i;
+    }
+
+    return QUEUE_INDEX_MAX_VALUE;
 }
 
 } // end namespace lvk

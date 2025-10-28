@@ -14,30 +14,27 @@ namespace lvk {
 
 class InstanceBuilder;
 
-class Instance {
+struct Instance {
 public:
-    ~Instance();
+    // ~Instance();
+    explicit operator VkInstance() const;
 
-private:
-    VkInstance instance_ = VK_NULL_HANDLE;
-    VkDebugUtilsMessengerEXT debug_messenger_ = VK_NULL_HANDLE;
-    VkAllocationCallbacks* allocation_callbacks_ = nullptr;
-    PFN_vkGetInstanceProcAddr fp_vkGetInstanceProcAddr_ = nullptr;
-    PFN_vkGetDeviceProcAddr fp_vkGetDeviceProcAddr_ = nullptr;
+    VkInstance instance = VK_NULL_HANDLE;
+    VkDebugUtilsMessengerEXT debug_messenger = VK_NULL_HANDLE;
+    VkAllocationCallbacks* allocation_callbacks = nullptr;
+    PFN_vkGetInstanceProcAddr fp_vkGetInstanceProcAddr = nullptr;
+    PFN_vkGetDeviceProcAddr fp_vkGetDeviceProcAddr = nullptr;
     // The apiVersion used to create the instance
-    uint32_t instance_version_ = VK_API_VERSION_1_1;
+    uint32_t instance_version = VK_API_VERSION_1_1;
     // The instance version queried from vkEnumerateInstanceVersion
-    uint32_t api_version_ = VK_API_VERSION_1_1;
+    uint32_t api_version = VK_API_VERSION_1_1;
 
 
     // A conversion function which allows this Instance to be used
     // in places where VkInstance would have been used.
-    explicit operator VkInstance() const;
 
-
-private:
-    bool headless_ = false;
-    bool properties2_ext_enabled_ = false;
+    bool headless = false;
+    bool properties2_ext_enabled = false;
 
     friend class InstanceBuilder;
 };
