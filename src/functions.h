@@ -120,5 +120,11 @@ T get_instance_proc_addr(VkInstance instance, const char *fun) {
     return reinterpret_cast<T>(tmp);
 }
 
+template<typename T>
+T get_device_proc_addr(VkDevice device, const char *fun) {
+    auto tmp = vkGetDeviceProcAddr(device, fun);
+    return reinterpret_cast<T>(tmp);
+}
+
 } // end of namespace lvk
 #endif //LVK_FUNCTIONS_H

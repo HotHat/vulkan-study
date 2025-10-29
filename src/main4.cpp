@@ -62,9 +62,13 @@ int main() {
 
     // Get the graphics queue with a helper function
     auto graphics_queue = vkb_device.GetQueue(lvk::QueueType::kGraphics);
+    auto graphics_queue_index = vkb_device.GetQueueIndex(lvk::QueueType::kGraphics);
     auto present_queue = vkb_device.GetQueue(lvk::QueueType::kPresent);
+    auto present_queue_index = vkb_device.GetQueueIndex(lvk::QueueType::kPresent);
     std::cout << "Success to select graphics queue\n";
+    std::cout << "Success to select graphics queue index:" << graphics_queue_index << "\n";
     std::cout << "Success to select present queue\n";
+    std::cout << "Success to select present queue index:" << present_queue_index << "\n";
 
     lvk::destroy_device(vkb_device);
     lvk::destroy_surface(instance, surface);
