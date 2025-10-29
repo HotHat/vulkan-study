@@ -39,7 +39,9 @@ public:
     friend class InstanceBuilder;
 };
 
-
+void destroy_instance(Instance const& instance);
+void destroy_surface(Instance const& instance, VkSurfaceKHR surface);
+void destroy_surface(VkInstance instance, VkSurfaceKHR surface, VkAllocationCallbacks* callbacks);
 
 class InstanceBuilder {
 public:

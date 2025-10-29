@@ -15,8 +15,8 @@ int main() {
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
-    GLFWwindow *window_ = nullptr;
-    window_ = glfwCreateWindow(800, 600, "Hello World!", nullptr, nullptr);
+    GLFWwindow *window = nullptr;
+    window = glfwCreateWindow(800, 600, "Hello World!", nullptr, nullptr);
 
     auto info = lvk::SystemInfo::get_system_info();
     auto support = glfwVulkanSupported();
@@ -39,7 +39,7 @@ int main() {
             .Build ();
 
     VkSurfaceKHR surface = VK_NULL_HANDLE;
-    VkResult glfw_result = glfwCreateWindowSurface(instance.instance, window_, nullptr, &surface);
+    VkResult glfw_result = glfwCreateWindowSurface(instance.instance, window, nullptr, &surface);
     if (glfw_result != VK_SUCCESS) {
         std::cerr << "Failed to select create window surface. Error: " << std::to_string(glfw_result) << "\n";
         return EXIT_FAILURE;
@@ -49,6 +49,29 @@ int main() {
     auto physical_device = selector.SetSurface(surface).Select();
 
     std::cout << "Success to select physical device: " << physical_device.name << "\n";
+
+
+    lvk::DeviceBuilder device_builder{ physical_device };
+    // automatically propagate needed data from instance & physical device
+    auto vkb_device= device_builder.Build();
+
+    std::cout << "Success to select logic device\n";
+
+    // Get the VkDevice handle used in the rest of a vulkan application
+    VkDevice device = vkb_device.device;
+
+    // Get the graphics queue with a helper function
+    auto graphics_queue = vkb_device.GetQueue(lvk::QueueType::kGraphics);
+    auto present_queue = vkb_device.GetQueue(lvk::QueueType::kPresent);
+    std::cout << "Success to select graphics queue\n";
+    std::cout << "Success to select present queue\n";
+
+    lvk::destroy_device(vkb_device);
+    lvk::destroy_surface(instance, surface);
+    lvk::destroy_instance(instance);
+
+    glfwDestroyWindow(window);
+    glfwTerminate();
 
     return EXIT_SUCCESS;
 }

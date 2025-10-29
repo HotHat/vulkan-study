@@ -285,13 +285,13 @@ struct Device {
     PFN_vkGetDeviceProcAddr fp_vkGetDeviceProcAddr = nullptr;
     uint32_t instance_version = VK_API_VERSION_1_0;
 
-    uint32_t get_queue_index(QueueType type) const;
+    uint32_t GetQueueIndex(QueueType type) const;
     // Only a compute or transfer queue type is valid. All other queue types do not support a 'dedicated' queue index
     uint32_t GetDedicatedQueueIndex(QueueType type) const;
 
-    VkQueue get_queue(QueueType type) const;
+    VkQueue GetQueue(QueueType type) const;
     // Only a compute or transfer queue type is valid. All other queue types do not support a 'dedicated' queue
-    VkQueue get_dedicated_queue(QueueType type) const;
+    VkQueue GetDedicatedQueue(QueueType type) const;
 
     // A conversion function which allows this Device to be used
     // in places where VkDevice would have been used.
@@ -329,26 +329,26 @@ class DeviceBuilder {
     // Any features and extensions that are requested/required in PhysicalDeviceSelector are automatically enabled.
     explicit DeviceBuilder(PhysicalDevice physical_device);
 
-    Device build() const;
+    Device Build() const;
 
     // For Advanced Users: specify the exact list of VkDeviceQueueCreateInfo's needed for the application.
     // If a custom queue setup is provided, getting the queues and queue indexes is up to the application.
-    DeviceBuilder& custom_queue_setup(size_t count, CustomQueueDescription const* queue_descriptions);
-    DeviceBuilder& custom_queue_setup(std::vector<CustomQueueDescription> const& queue_descriptions);
-    DeviceBuilder& custom_queue_setup(std::vector<CustomQueueDescription>&& queue_descriptions);
+    DeviceBuilder& CustomQueueSetup(size_t count, CustomQueueDescription const* queue_descriptions);
+    DeviceBuilder& CustomQueueSetup(std::vector<CustomQueueDescription> const& queue_descriptions);
+    DeviceBuilder& CustomQueueSetup(std::vector<CustomQueueDescription>&& queue_descriptions);
 #if VKB_SPAN_OVERLOADS
     DeviceBuilder& custom_queue_setup(std::span<const CustomQueueDescription> queue_descriptions);
 #endif
 
     // Add a structure to the pNext chain of VkDeviceCreateInfo.
     // The structure must be valid when DeviceBuilder::build() is called.
-    template <typename T> DeviceBuilder& add_pNext(T* structure) {
+    template <typename T> DeviceBuilder& AddPNext(T* structure) {
         info.next_chain.push_back(structure);
         return *this;
     }
 
     // Provide custom allocation callbacks.
-    DeviceBuilder& set_allocation_callbacks(VkAllocationCallbacks* callbacks);
+    DeviceBuilder& SetAllocationCallbacks(VkAllocationCallbacks* callbacks);
 
     private:
     PhysicalDevice physical_device;
