@@ -8,6 +8,7 @@
 #include <vector>
 #include <assert.h>
 #include <string>
+#include <mutex>
 
 namespace lvk {
 
@@ -125,6 +126,80 @@ T get_device_proc_addr(VkDevice device, const char *fun) {
     auto tmp = vkGetDeviceProcAddr(device, fun);
     return reinterpret_cast<T>(tmp);
 }
+
+class VulkanFunctions {
+private:
+    std::mutex init_mutex;
+    bool initialized = false;
+
+    std::mutex instance_functions_mutex;
+    bool instance_functions_initialized = false;
+
+
+public:
+    bool init_vulkan_funcs() {
+        std::lock_guard<std::mutex> lg(init_mutex);
+        if (initialized) {
+            return true;
+        }
+        //
+        ptr_vkGetInstanceProcAddr = vkGetInstanceProcAddr;
+
+        fp_vkEnumerateInstanceExtensionProperties = reinterpret_cast<PFN_vkEnumerateInstanceExtensionProperties>(
+                ptr_vkGetInstanceProcAddr(VK_NULL_HANDLE, "vkEnumerateInstanceExtensionProperties"));
+        fp_vkEnumerateInstanceLayerProperties = reinterpret_cast<PFN_vkEnumerateInstanceLayerProperties>(
+                ptr_vkGetInstanceProcAddr(VK_NULL_HANDLE, "vkEnumerateInstanceLayerProperties"));
+        fp_vkEnumerateInstanceVersion = reinterpret_cast<PFN_vkEnumerateInstanceVersion>(
+                ptr_vkGetInstanceProcAddr(VK_NULL_HANDLE, "vkEnumerateInstanceVersion"));
+        fp_vkCreateInstance =
+                reinterpret_cast<PFN_vkCreateInstance>(ptr_vkGetInstanceProcAddr(VK_NULL_HANDLE, "vkCreateInstance"));
+        initialized = true;
+        return true;
+    }
+
+    template <typename T> void get_inst_proc_addr(T& out_ptr, const char* func_name) {
+        out_ptr = reinterpret_cast<T>(ptr_vkGetInstanceProcAddr(instance, func_name));
+    }
+
+    template <typename T> void get_device_proc_addr(VkDevice device, T& out_ptr, const char* func_name) {
+        out_ptr = reinterpret_cast<T>(fp_vkGetDeviceProcAddr(device, func_name));
+    }
+
+    PFN_vkGetInstanceProcAddr ptr_vkGetInstanceProcAddr = nullptr;
+    VkInstance instance = nullptr;
+
+    PFN_vkEnumerateInstanceExtensionProperties fp_vkEnumerateInstanceExtensionProperties = nullptr;
+    PFN_vkEnumerateInstanceLayerProperties fp_vkEnumerateInstanceLayerProperties = nullptr;
+    PFN_vkEnumerateInstanceVersion fp_vkEnumerateInstanceVersion = nullptr;
+    PFN_vkCreateInstance fp_vkCreateInstance = nullptr;
+
+    PFN_vkDestroyInstance fp_vkDestroyInstance = nullptr;
+    PFN_vkCreateDebugUtilsMessengerEXT fp_vkCreateDebugUtilsMessengerEXT = nullptr;
+    PFN_vkDestroyDebugUtilsMessengerEXT fp_vkDestroyDebugUtilsMessengerEXT = nullptr;
+    PFN_vkEnumeratePhysicalDevices fp_vkEnumeratePhysicalDevices = nullptr;
+    PFN_vkGetPhysicalDeviceFeatures fp_vkGetPhysicalDeviceFeatures = nullptr;
+    PFN_vkGetPhysicalDeviceFeatures2 fp_vkGetPhysicalDeviceFeatures2 = nullptr;
+    PFN_vkGetPhysicalDeviceFeatures2KHR fp_vkGetPhysicalDeviceFeatures2KHR = nullptr;
+    PFN_vkGetPhysicalDeviceProperties fp_vkGetPhysicalDeviceProperties = nullptr;
+    PFN_vkGetPhysicalDeviceQueueFamilyProperties fp_vkGetPhysicalDeviceQueueFamilyProperties = nullptr;
+    PFN_vkGetPhysicalDeviceMemoryProperties fp_vkGetPhysicalDeviceMemoryProperties = nullptr;
+    PFN_vkEnumerateDeviceExtensionProperties fp_vkEnumerateDeviceExtensionProperties = nullptr;
+
+    PFN_vkCreateDevice fp_vkCreateDevice = nullptr;
+    PFN_vkGetDeviceProcAddr fp_vkGetDeviceProcAddr = nullptr;
+
+    PFN_vkDestroySurfaceKHR fp_vkDestroySurfaceKHR = nullptr;
+    PFN_vkGetPhysicalDeviceSurfaceSupportKHR fp_vkGetPhysicalDeviceSurfaceSupportKHR = nullptr;
+    PFN_vkGetPhysicalDeviceSurfaceFormatsKHR fp_vkGetPhysicalDeviceSurfaceFormatsKHR = nullptr;
+    PFN_vkGetPhysicalDeviceSurfacePresentModesKHR fp_vkGetPhysicalDeviceSurfacePresentModesKHR = nullptr;
+    PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR fp_vkGetPhysicalDeviceSurfaceCapabilitiesKHR = nullptr;
+
+    void init_instance_funcs(VkInstance inst);
+
+    void deinit();
+};
+
+VulkanFunctions& vulkan_functions();
 
 } // end of namespace lvk
 #endif //LVK_FUNCTIONS_H

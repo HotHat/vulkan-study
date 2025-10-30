@@ -26,15 +26,15 @@ struct Swapchain {
     VkAllocationCallbacks* allocation_callbacks = nullptr;
 
     // Returns a vector of VkImage handles to the swapchain.
-    std::vector<VkImage> get_images();
+    std::vector<VkImage> GetImages();
 
     // Returns a vector of VkImageView's to the VkImage's of the swapchain.
     // VkImageViews must be destroyed.  The pNext chain must be a nullptr or a valid
     // structure.
-    std::vector<VkImageView> get_image_views();
-    std::vector<VkImageView> get_image_views(const void* pNext);
-    void destroy_image_views(size_t count, VkImageView const* image_views);
-    void destroy_image_views(std::vector<VkImageView> const& image_views);
+    std::vector<VkImageView> GetImageViews();
+    std::vector<VkImageView> GetImageViews(const void* pNext);
+    void DestroyImageViews(size_t count, VkImageView const* image_views) const;
+    void DestroyImageViews(std::vector<VkImageView> const& image_views) const;
 
     // A conversion function which allows this Swapchain to be used
     // in places where VkSwapchainKHR would have been used.
@@ -68,94 +68,94 @@ public:
                               uint32_t graphics_queue_index = QUEUE_INDEX_MAX_VALUE,
                               uint32_t present_queue_index = QUEUE_INDEX_MAX_VALUE);
 
-    Swapchain build() const;
+    Swapchain Build() const;
 
     // Set the oldSwapchain member of VkSwapchainCreateInfoKHR.
     // For use in rebuilding a swapchain.
-    SwapchainBuilder& set_old_swapchain(VkSwapchainKHR old_swapchain);
-    SwapchainBuilder& set_old_swapchain(Swapchain const& swapchain);
+    SwapchainBuilder& SetOldSwapchain(VkSwapchainKHR old_swapchain);
+    SwapchainBuilder& SetOldSwapchain(Swapchain const& swapchain);
 
 
     // Desired size of the swapchain. By default, the swapchain will use the size
     // of the window being drawn to.
-    SwapchainBuilder& set_desired_extent(uint32_t width, uint32_t height);
+    SwapchainBuilder& SetDesiredExtent(uint32_t width, uint32_t height);
 
     // When determining the surface format, make this the first to be used if supported.
-    SwapchainBuilder& set_desired_format(VkSurfaceFormatKHR format);
+    SwapchainBuilder& SetDesiredFormat(VkSurfaceFormatKHR format);
     // Add this swapchain format to the end of the list of formats selected from.
-    SwapchainBuilder& add_fallback_format(VkSurfaceFormatKHR format);
+    SwapchainBuilder& AddFallbackFormat(VkSurfaceFormatKHR format);
     // Use the default swapchain formats. This is done if no formats are provided.
     // Default surface format is {VK_FORMAT_B8G8R8A8_SRGB, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR}
-    SwapchainBuilder& use_default_format_selection();
+    SwapchainBuilder& UseDefaultFormatSelection();
 
     // When determining the present mode, make this the first to be used if supported.
-    SwapchainBuilder& set_desired_present_mode(VkPresentModeKHR present_mode);
+    SwapchainBuilder& SetDesiredPresentMode(VkPresentModeKHR present_mode);
     // Add this present mode to the end of the list of present modes selected from.
-    SwapchainBuilder& add_fallback_present_mode(VkPresentModeKHR present_mode);
+    SwapchainBuilder& AddFallbackPresentMode(VkPresentModeKHR present_mode);
     // Use the default presentation mode. This is done if no present modes are provided.
     // Default present modes: VK_PRESENT_MODE_MAILBOX_KHR with fallback VK_PRESENT_MODE_FIFO_KHR
-    SwapchainBuilder& use_default_present_mode_selection();
+    SwapchainBuilder& UseDefaultPresentModeSelection();
 
     // Set the bitmask of the image usage for acquired swapchain images.
     // If the surface capabilities cannot allow it, building the swapchain will result in the `SwapchainError::required_usage_not_supported` error.
-    SwapchainBuilder& set_image_usage_flags(VkImageUsageFlags usage_flags);
+    SwapchainBuilder& SetImageUsageFlags(VkImageUsageFlags usage_flags);
     // Add a image usage to the bitmask for acquired swapchain images.
-    SwapchainBuilder& add_image_usage_flags(VkImageUsageFlags usage_flags);
+    SwapchainBuilder& AddImageUsageFlags(VkImageUsageFlags usage_flags);
     // Use the default image usage bitmask values. This is the default if no image usages
     // are provided. The default is VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
-    SwapchainBuilder& use_default_image_usage_flags();
+    SwapchainBuilder& UseDefaultImageUsageFlags();
 
     // Set the number of views in for multiview/stereo surface
-    SwapchainBuilder& set_image_array_layer_count(uint32_t array_layer_count);
+    SwapchainBuilder& SetImageArrayLayerCount(uint32_t array_layer_count);
 
     // Convenient named constants for passing to set_desired_min_image_count().
     // Note that it is not an `enum class`, so its constants can be passed as an integer value without casting
     // In other words, these might as well be `static const int`, but they benefit from being grouped together this way.
     enum BufferMode {
-        SINGLE_BUFFERING = 1,
-        DOUBLE_BUFFERING = 2,
-        TRIPLE_BUFFERING = 3,
+        kSingleBuffering = 1,
+        kDoubleBuffering = 2,
+        kTripleBuffering = 3,
     };
 
     // Sets the desired minimum image count for the swapchain.
     // Note that the presentation engine is always free to create more images than requested.
     // You may pass one of the values specified in the BufferMode enum, or any integer value.
     // For instance, if you pass DOUBLE_BUFFERING, the presentation engine is allowed to give you a double buffering setup, triple buffering, or more. This is up to the drivers.
-    SwapchainBuilder& set_desired_min_image_count(uint32_t min_image_count);
+    SwapchainBuilder& SetDesiredMinImageCount(uint32_t min_image_count);
 
     // Sets a required minimum image count for the swapchain.
     // If the surface capabilities cannot allow it, building the swapchain will result in the `SwapchainError::required_min_image_count_too_low` error.
     // Otherwise, the same observations from set_desired_min_image_count() apply.
     // A value of 0 is specially interpreted as meaning "no requirement", and is the behavior by default.
-    SwapchainBuilder& set_required_min_image_count(uint32_t required_min_image_count);
+    SwapchainBuilder& SetRequiredMinImageCount(uint32_t required_min_image_count);
 
     // Set whether the Vulkan implementation is allowed to discard rendering operations that
     // affect regions of the surface that are not visible. Default is true.
     // Note: Applications should use the default of true if they do not expect to read back the content
     // of presentable images before presenting them or after reacquiring them, and if their fragment
     // shaders do not have any side effects that require them to run for all pixels in the presentable image.
-    SwapchainBuilder& set_clipped(bool clipped = true);
+    SwapchainBuilder& SetClipped(bool clipped = true);
 
     // Set the VkSwapchainCreateFlagBitsKHR.
-    SwapchainBuilder& set_create_flags(VkSwapchainCreateFlagBitsKHR create_flags);
+    SwapchainBuilder& SetCreateFlags(VkSwapchainCreateFlagBitsKHR create_flags);
     // Set the transform to be applied, like a 90 degree rotation. Default is no transform.
-    SwapchainBuilder& set_pre_transform_flags(VkSurfaceTransformFlagBitsKHR pre_transform_flags);
+    SwapchainBuilder& SetPreTransformFlags(VkSurfaceTransformFlagBitsKHR pre_transform_flags);
     // Set the alpha channel to be used with other windows in on the system. Default is VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR.
-    SwapchainBuilder& set_composite_alpha_flags(VkCompositeAlphaFlagBitsKHR composite_alpha_flags);
+    SwapchainBuilder& SetCompositeAlphaFlags(VkCompositeAlphaFlagBitsKHR composite_alpha_flags);
 
     // Add a structure to the pNext chain of VkSwapchainCreateInfoKHR.
     // The structure must be valid when SwapchainBuilder::build() is called.
-    template <typename T> SwapchainBuilder& add_pNext(T* structure) {
+    template <typename T> SwapchainBuilder& AddNext(T* structure) {
         info.pNext_chain.push_back(structure);
         return *this;
     }
 
     // Provide custom allocation callbacks.
-    SwapchainBuilder& set_allocation_callbacks(VkAllocationCallbacks* callbacks);
+    SwapchainBuilder& SetAllocationCallbacks(VkAllocationCallbacks* callbacks);
 
 private:
-    void add_desired_formats(std::vector<VkSurfaceFormatKHR>& formats) const;
-    void add_desired_present_modes(std::vector<VkPresentModeKHR>& modes) const;
+    void AddDesiredFormats(std::vector<VkSurfaceFormatKHR>& formats) const;
+    void AddDesiredPresentModes(std::vector<VkPresentModeKHR>& modes) const;
 
     struct SwapchainInfo {
         VkPhysicalDevice physical_device = VK_NULL_HANDLE;

@@ -9,6 +9,7 @@
 #include "system_info.h"
 #include "instance.h"
 #include "physical_device.h"
+#include "swapchain.h"
 
 
 int main() {
@@ -70,6 +71,13 @@ int main() {
     std::cout << "Success to select present queue\n";
     std::cout << "Success to select present queue index:" << present_queue_index << "\n";
 
+
+    lvk::SwapchainBuilder swapchain_builder{ vkb_device };
+    auto vkb_swapchain = swapchain_builder.Build();
+    std::cout << "Success create swapchain\n";
+
+
+    lvk::destroy_swapchain(vkb_swapchain);
     lvk::destroy_device(vkb_device);
     lvk::destroy_surface(instance, surface);
     lvk::destroy_instance(instance);

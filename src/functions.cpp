@@ -134,5 +134,53 @@ uint32_t get_present_queue_index(
 
     return QUEUE_INDEX_MAX_VALUE;
 }
+// vulkan function
+void VulkanFunctions::init_instance_funcs(VkInstance inst) {
+    std::lock_guard<std::mutex> lg(instance_functions_mutex);
+    if (instance_functions_initialized) return;
+    instance = inst;
+    get_inst_proc_addr(fp_vkDestroyInstance, "vkDestroyInstance");
+    get_inst_proc_addr(fp_vkCreateDebugUtilsMessengerEXT, "vkCreateDebugUtilsMessengerEXT");
+    get_inst_proc_addr(fp_vkDestroyDebugUtilsMessengerEXT, "vkDestroyDebugUtilsMessengerEXT");
+    get_inst_proc_addr(fp_vkEnumeratePhysicalDevices, "vkEnumeratePhysicalDevices");
 
+    get_inst_proc_addr(fp_vkGetPhysicalDeviceFeatures, "vkGetPhysicalDeviceFeatures");
+    get_inst_proc_addr(fp_vkGetPhysicalDeviceFeatures2, "vkGetPhysicalDeviceFeatures2");
+    get_inst_proc_addr(fp_vkGetPhysicalDeviceFeatures2KHR, "vkGetPhysicalDeviceFeatures2KHR");
+    get_inst_proc_addr(fp_vkGetPhysicalDeviceProperties, "vkGetPhysicalDeviceProperties");
+    get_inst_proc_addr(fp_vkGetPhysicalDeviceQueueFamilyProperties, "vkGetPhysicalDeviceQueueFamilyProperties");
+    get_inst_proc_addr(fp_vkGetPhysicalDeviceMemoryProperties, "vkGetPhysicalDeviceMemoryProperties");
+    get_inst_proc_addr(fp_vkEnumerateDeviceExtensionProperties, "vkEnumerateDeviceExtensionProperties");
+
+    get_inst_proc_addr(fp_vkCreateDevice, "vkCreateDevice");
+    get_inst_proc_addr(fp_vkGetDeviceProcAddr, "vkGetDeviceProcAddr");
+
+    get_inst_proc_addr(fp_vkDestroySurfaceKHR, "vkDestroySurfaceKHR");
+    get_inst_proc_addr(fp_vkGetPhysicalDeviceSurfaceSupportKHR, "vkGetPhysicalDeviceSurfaceSupportKHR");
+    get_inst_proc_addr(fp_vkGetPhysicalDeviceSurfaceFormatsKHR, "vkGetPhysicalDeviceSurfaceFormatsKHR");
+    get_inst_proc_addr(fp_vkGetPhysicalDeviceSurfacePresentModesKHR, "vkGetPhysicalDeviceSurfacePresentModesKHR");
+    get_inst_proc_addr(fp_vkGetPhysicalDeviceSurfaceCapabilitiesKHR, "vkGetPhysicalDeviceSurfaceCapabilitiesKHR");
+    instance_functions_initialized = true;
+}
+
+void VulkanFunctions::deinit() {
+    {
+        std::lock_guard<std::mutex> lg(instance_functions_mutex);
+        if (instance_functions_initialized) {
+            instance_functions_initialized = false;
+        }
+    }
+    {
+        std::lock_guard<std::mutex> lg(init_mutex);
+        if (initialized) {
+            initialized = false;
+        }
+    }
+}
+
+VulkanFunctions& vulkan_functions() {
+    static VulkanFunctions v;
+    v.init_vulkan_funcs();
+    return v;
+}
 } // end namespace lvk

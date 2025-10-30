@@ -14,17 +14,22 @@ Instance::operator VkInstance() const {
 
 void destroy_instance(Instance const& instance) {
     if (instance.instance != VK_NULL_HANDLE) {
+        //
+        vulkan_functions().deinit();
+
         if (instance.debug_messenger != VK_NULL_HANDLE)
             destroy_debug_utils_messenger(instance.instance, instance.debug_messenger, instance.allocation_callbacks);
         vkDestroyInstance(instance.instance, instance.allocation_callbacks);
     }
 }
+
 void destroy_surface(Instance const& instance, VkSurfaceKHR surface) {
     if (instance.instance != VK_NULL_HANDLE && surface != VK_NULL_HANDLE) {
         auto pVkDestroySurfaceKHR = get_instance_proc_addr<PFN_vkDestroySurfaceKHR>(instance.instance, "vkDestroySurfaceKHR");
         pVkDestroySurfaceKHR(instance.instance, surface, instance.allocation_callbacks);
     }
 }
+
 void destroy_surface(VkInstance instance, VkSurfaceKHR surface, VkAllocationCallbacks* callbacks) {
     if (instance != VK_NULL_HANDLE && surface != VK_NULL_HANDLE) {
         auto pVkDestroySurfaceKHR = get_instance_proc_addr<PFN_vkDestroySurfaceKHR>(instance, "vkDestroySurfaceKHR");
@@ -229,6 +234,9 @@ Instance InstanceBuilder::Build() const {
     if (res != VK_SUCCESS) {
         throw std::runtime_error("failed_create_instance");
     }
+
+    // init vulkan functions
+    vulkan_functions().init_instance_funcs(instance.instance);
 
     if (info.use_debug_messenger) {
         res = create_debug_utils_messenger(instance.instance,
