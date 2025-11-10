@@ -7,7 +7,7 @@
 
 #include <vulkan/vulkan.h>
 #include <vector>
-#include "physical_device.h"
+#include "device.h"
 
 namespace lvk {
 

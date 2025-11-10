@@ -9,8 +9,9 @@
 
 #include "system_info.h"
 #include "instance.h"
-#include "physical_device.h"
+#include "device.h"
 #include "swapchain.h"
+#include "render_context.h"
 
 
 const int MAX_FRAMES_IN_FLIGHT = 2;
@@ -406,6 +407,67 @@ int create_command_buffers(Init &init, RenderData &data) {
     return 0;
 }
 
+void create_command_buffers_v2(lvk::RenderContext &context) {
+    context.command_buffers.resize(context.framebuffers.size());
+
+    VkCommandBufferAllocateInfo allocInfo = {};
+    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.commandPool = context.command_pool;
+    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandBufferCount = context.command_buffers.size();
+
+    if (vkAllocateCommandBuffers(context.device.device, &allocInfo, context.command_buffers.data()) != VK_SUCCESS) {
+        throw std::runtime_error("failed to allocate command buffers");
+    }
+
+    for (size_t i = 0; i < context.command_buffers.size(); i++) {
+        VkCommandBufferBeginInfo begin_info = {};
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+
+        if (vkBeginCommandBuffer(context.command_buffers[i], &begin_info) != VK_SUCCESS) {
+            throw std::runtime_error("failed to begin recording command buffer");
+        }
+
+        VkRenderPassBeginInfo render_pass_info = {};
+        render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        render_pass_info.renderPass = context.render_pass;
+        render_pass_info.framebuffer = context.framebuffers[i];
+        render_pass_info.renderArea.offset = {0, 0};
+        render_pass_info.renderArea.extent = context.swapchain.extent;
+        VkClearValue clearColor{{{0.0f, 0.0f, 0.0f, 1.0f}}};
+        render_pass_info.clearValueCount = 1;
+        render_pass_info.pClearValues = &clearColor;
+
+        VkViewport viewport = {};
+        viewport.x = 0.0f;
+        viewport.y = 0.0f;
+        viewport.width = static_cast<float>(context.swapchain.extent.width);
+        viewport.height = static_cast<float>(context.swapchain.extent.height);
+        viewport.minDepth = 0.0f;
+        viewport.maxDepth = 1.0f;
+
+        VkRect2D scissor = {};
+        scissor.offset = {0, 0};
+        scissor.extent = context.swapchain.extent;
+
+        vkCmdSetViewport(context.command_buffers[i], 0, 1, &viewport);
+        vkCmdSetScissor(context.command_buffers[i], 0, 1, &scissor);
+
+        vkCmdBeginRenderPass(context.command_buffers[i], &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
+
+        vkCmdBindPipeline(context.command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, context.graphics_pipeline);
+
+        vkCmdDraw(context.command_buffers[i], 3, 1, 0, 0);
+
+        vkCmdEndRenderPass(context.command_buffers[i]);
+
+        if (vkEndCommandBuffer(context.command_buffers[i]) != VK_SUCCESS) {
+            std::cout << "failed to record command buffer\n";
+            throw std::runtime_error("failed to record command buffer");
+        }
+    }
+}
+
 int create_sync_objects(Init &init, RenderData &data) {
     data.available_semaphores.resize(MAX_FRAMES_IN_FLIGHT);
     data.finished_semaphore.resize(init.swapchain.image_count);
@@ -436,62 +498,68 @@ int create_sync_objects(Init &init, RenderData &data) {
     return 0;
 }
 
-int recreate_swapchain(Init &init, RenderData &data) {
+int recreate_swapchain(Init &init, lvk::RenderContext &context) {
     vkDeviceWaitIdle(init.device.device);
 
-    vkDestroyCommandPool(init.device.device, data.command_pool, nullptr);
+    vkDestroyCommandPool(init.device.device, context.command_pool, nullptr);
 
-    for (auto framebuffer: data.framebuffers) {
+    for (auto framebuffer: context.framebuffers) {
         vkDestroyFramebuffer(init.device.device, framebuffer, nullptr);
     }
 
-    init.swapchain.DestroyImageViews(data.swapchain_image_views);
+    init.swapchain.DestroyImageViews(context.swapchain_image_views);
 
     if (0 != create_swapchain(init)) return -1;
-    if (0 != create_framebuffers(init, data)) return -1;
-    if (0 != create_command_pool(init, data)) return -1;
-    if (0 != create_command_buffers(init, data)) return -1;
+    context.reset_swapchain(init.swapchain);
+    context.create_framebuffers();
+    context.create_command_pool();
+    create_command_buffers_v2(context);
+
+    // if (0 != create_framebuffers(init, data)) return -1;
+    // if (0 != create_command_pool(init, data)) return -1;
+    // if (0 != create_command_buffers(init, data)) return -1;
     return 0;
 }
 
-int draw_frame(Init &init, RenderData &data) {
-    vkWaitForFences(init.device.device, 1, &data.in_flight_fences[data.current_frame], VK_TRUE, UINT64_MAX);
+// int draw_frame(Init &init, RenderData &data) {
+int draw_frame(Init &init, lvk::RenderContext &context) {
+    vkWaitForFences(context.device.device, 1, &context.in_flight_fences[context.current_frame], VK_TRUE, UINT64_MAX);
 
     uint32_t image_index = 0;
-    VkResult result = vkAcquireNextImageKHR(init.device.device,
-        init.swapchain.swapchain, UINT64_MAX, data.available_semaphores[data.current_frame], VK_NULL_HANDLE, &image_index);
+    VkResult result = vkAcquireNextImageKHR(context.device.device,
+        context.swapchain.swapchain, UINT64_MAX, context.available_semaphores[context.current_frame], VK_NULL_HANDLE, &image_index);
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-        return recreate_swapchain(init, data);
+        return recreate_swapchain(init, context);
     } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
         std::cout << "failed to acquire swapchain image. Error " << result << "\n";
         return -1;
     }
 
-    if (data.image_in_flight[image_index] != VK_NULL_HANDLE) {
-        vkWaitForFences(init.device.device, 1, &data.image_in_flight[image_index], VK_TRUE, UINT64_MAX);
+    if (context.image_in_flight[image_index] != VK_NULL_HANDLE) {
+        vkWaitForFences(context.device.device, 1, &context.image_in_flight[image_index], VK_TRUE, UINT64_MAX);
     }
-    data.image_in_flight[image_index] = data.in_flight_fences[data.current_frame];
+    context.image_in_flight[image_index] = context.in_flight_fences[context.current_frame];
 
     VkSubmitInfo submitInfo = {};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-    VkSemaphore wait_semaphores[] = {data.available_semaphores[data.current_frame]};
+    VkSemaphore wait_semaphores[] = {context.available_semaphores[context.current_frame]};
     VkPipelineStageFlags wait_stages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
     submitInfo.waitSemaphoreCount = 1;
     submitInfo.pWaitSemaphores = wait_semaphores;
     submitInfo.pWaitDstStageMask = wait_stages;
 
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &data.command_buffers[image_index];
+    submitInfo.pCommandBuffers = &context.command_buffers[image_index];
 
-    VkSemaphore signal_semaphores[] = {data.finished_semaphore[image_index]};
+    VkSemaphore signal_semaphores[] = {context.finished_semaphore[image_index]};
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signal_semaphores;
 
-    vkResetFences(init.device.device, 1, &data.in_flight_fences[data.current_frame]);
+    vkResetFences(context.device.device, 1, &context.in_flight_fences[context.current_frame]);
 
-    if (vkQueueSubmit(data.graphics_queue, 1, &submitInfo, data.in_flight_fences[data.current_frame]) !=
+    if (vkQueueSubmit(context.graphics_queue, 1, &submitInfo, context.in_flight_fences[context.current_frame]) !=
         VK_SUCCESS) {
         std::cout << "failed to submit draw command buffer\n";
         return -1; //"failed to submit draw command buffer
@@ -503,44 +571,26 @@ int draw_frame(Init &init, RenderData &data) {
     present_info.waitSemaphoreCount = 1;
     present_info.pWaitSemaphores = signal_semaphores;
 
-    VkSwapchainKHR swapChains[] = {init.swapchain.swapchain};
+    VkSwapchainKHR swapChains[] = {context.swapchain.swapchain};
     present_info.swapchainCount = 1;
     present_info.pSwapchains = swapChains;
 
     present_info.pImageIndices = &image_index;
 
-    result = vkQueuePresentKHR(data.present_queue, &present_info);
+    result = vkQueuePresentKHR(context.present_queue, &present_info);
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
-        return recreate_swapchain(init, data);
+        return recreate_swapchain(init, context);
     } else if (result != VK_SUCCESS) {
         std::cout << "failed to present swapchain image\n";
         return -1;
     }
 
-    data.current_frame = (data.current_frame + 1) % MAX_FRAMES_IN_FLIGHT;
+    context.current_frame = (context.current_frame + 1) % context.max_frames_in_flight;
     return 0;
 }
 
-void cleanup(Init &init, RenderData &data) {
-    for (size_t i = 0; i < init.swapchain.image_count; i++) {
-        vkDestroySemaphore(init.device.device, data.finished_semaphore[i], nullptr);
-    }
-    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        vkDestroySemaphore(init.device.device, data.available_semaphores[i], nullptr);
-        vkDestroyFence(init.device.device, data.in_flight_fences[i], nullptr);
-    }
-
-    vkDestroyCommandPool(init.device.device, data.command_pool, nullptr);
-
-    for (auto framebuffer: data.framebuffers) {
-        vkDestroyFramebuffer(init.device.device, framebuffer, nullptr);
-    }
-
-    vkDestroyPipeline(init.device.device, data.graphics_pipeline, nullptr);
-    vkDestroyPipelineLayout(init.device.device, data.pipeline_layout, nullptr);
-    vkDestroyRenderPass(init.device.device, data.render_pass, nullptr);
-
-    init.swapchain.DestroyImageViews(data.swapchain_image_views);
+void cleanup(Init &init, lvk::RenderContext &context) {
+    context.clearup();
 
     lvk::destroy_swapchain(init.swapchain);
     lvk::destroy_device(init.device);
@@ -628,7 +678,7 @@ int main() {
 
     Init init;
     RenderData render_data;
-
+/*
     device_initialization(init);
     create_swapchain(init);
     get_queues(init, render_data);
@@ -638,10 +688,21 @@ int main() {
     create_command_pool(init, render_data);
     create_command_buffers(init, render_data);
     create_sync_objects(init, render_data);
+*/
+
+    device_initialization(init);
+    create_swapchain(init);
+    create_render_pass(init, render_data);
+    create_graphics_pipeline(init, render_data);
+
+    lvk::RenderContext context(init.device, init.swapchain,
+                               render_data.render_pass, render_data.pipeline_layout,
+                               render_data.graphics_pipeline);
+    create_command_buffers_v2(context);
 
     while (!glfwWindowShouldClose(init.window)) {
         glfwPollEvents();
-        int res = draw_frame(init, render_data);
+        int res = draw_frame(init, context);
         if (res != 0) {
             std::cout << "failed to draw frame \n";
             return -1;
@@ -650,7 +711,7 @@ int main() {
 
     vkDeviceWaitIdle(init.device.device );
 
-    cleanup(init, render_data);
+    cleanup(init, context);
 
     return EXIT_SUCCESS;
 }

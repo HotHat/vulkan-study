@@ -70,10 +70,10 @@ set(VK_INFO2
         src/functions.cpp
         src/system_info.cpp
         src/instance.cpp
-        src/physical_device.cpp
+        src/device.cpp
         src/feature_chain.cpp
         src/swapchain.cpp
-        src/swapchain.h
+        src/render_context.cpp
 )
 
 add_executable(vk_info2 ${VK_INFO2})
