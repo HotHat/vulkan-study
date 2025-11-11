@@ -56,6 +56,8 @@ set(VK_INFO
         src/VkInfo.cpp
         src/LkInstance.cpp
         src/LkDevice.cpp
+        src/vulkan_context.cpp
+        src/vulkan_context.h
 )
 
 add_executable(vk_info ${VK_INFO})
@@ -74,6 +76,8 @@ set(VK_INFO2
         src/feature_chain.cpp
         src/swapchain.cpp
         src/render_context.cpp
+        src/vulkan_context.cpp
+        src/simple_draw.cpp
 )
 
 add_executable(vk_info2 ${VK_INFO2})

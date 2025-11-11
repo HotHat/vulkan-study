@@ -5,9 +5,7 @@
 #ifndef LYH_RENDER_CONTEXT_H
 #define LYH_RENDER_CONTEXT_H
 
-
-#include "swapchain.h"
-#include "device.h"
+#include "vulkan_context.h"
 #include <vulkan/vulkan.h>
 #include <vector>
 
@@ -15,14 +13,13 @@
 namespace lvk {
 
 struct RenderContext {
+    // explicit RenderContext(VulkanContext &context_);
     explicit RenderContext(
-            Device device_,
-            Swapchain swapchain_,
+            VulkanContext &context,
             VkRenderPass render_pass_,
             VkPipelineLayout pipeline_layout_,
             VkPipeline graphics_pipeline_
     );
-
     VkQueue graphics_queue{};
     VkQueue present_queue{};
 
@@ -43,13 +40,19 @@ struct RenderContext {
     std::vector<VkFence> image_in_flight;
     size_t current_frame = 0;
 
-    uint8_t max_frames_in_flight;
+    uint8_t max_frames_in_flight = 3;
 
-    Swapchain swapchain;
-    Device device;
+    VulkanContext &context;
 
+    // Swapchain swapchain;
+    // Device device;
+    //
+    void recreate_swapchain();
+
+    void rendering();
     void reset_swapchain(Swapchain swapchain_);
-    void create_swapchain();
+    // void reset_context(VulkanContext context_);
+    // void create_swapchain();
     void create_framebuffers();
     void create_command_pool();
     void create_sync_objects();
