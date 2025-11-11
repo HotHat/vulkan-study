@@ -3,6 +3,17 @@ project(vulkan)
 
 set(CMAKE_CXX_STANDARD 20)
 
+
+set(VulkanSDK C:/VulkanSDK)
+set(VulkanSDKInclude ${VulkanSDK}/Include)
+set(VulkanSDKLib ${VulkanSDK}/Lib/vulkan-1.lib)
+
+# Add third party libraries
+add_subdirectory(third_party)
+
+# Add core
+add_subdirectory(framework)
+
 add_executable(vulkan src/main.cpp
         src/HelloTriangle.h
         src/HelloTriangle.cpp
@@ -61,9 +72,9 @@ set(VK_INFO
 )
 
 add_executable(vk_info ${VK_INFO})
-target_include_directories(vk_info PUBLIC C:/VulkanSDK/Include)
+target_include_directories(vk_info PUBLIC VulkanSDKInclude)
 target_link_libraries(vk_info
-        C:/VulkanSDK/Lib/vulkan-1.lib
+        VulkanSDKLib
         C:/VulkanSDK/Lib/glfw/glfw3.lib
 )
 
@@ -81,8 +92,9 @@ set(VK_INFO2
 )
 
 add_executable(vk_info2 ${VK_INFO2})
-target_include_directories(vk_info2 PUBLIC C:/VulkanSDK/Include)
+target_include_directories(vk_info2 PUBLIC C:/VulkanSDK/Include vma)
 target_link_libraries(vk_info2
         C:/VulkanSDK/Lib/vulkan-1.lib
         C:/VulkanSDK/Lib/glfw/glfw3.lib
 )
+
