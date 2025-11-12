@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+#define VMA_IMPLEMENTATION
 #include "allocated.h"
 
 namespace vkb

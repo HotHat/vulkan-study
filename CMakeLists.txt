@@ -6,7 +6,10 @@ set(CMAKE_CXX_STANDARD 20)
 
 set(VulkanSDK C:/VulkanSDK)
 set(VulkanSDKInclude ${VulkanSDK}/Include)
+set(VulkanSDKLibDir ${VulkanSDK}/Lib)
 set(VulkanSDKLib ${VulkanSDK}/Lib/vulkan-1.lib)
+set(VolkLib ${VulkanSDK}/Lib/volk.lib)
+set(VolkdLib ${VulkanSDK}/Lib/volkd.lib)
 
 # Add third party libraries
 add_subdirectory(third_party)
@@ -14,35 +17,15 @@ add_subdirectory(third_party)
 # Add core
 add_subdirectory(framework)
 
+# Add lvk
+add_subdirectory(lvk)
+
+
 add_executable(vulkan src/main.cpp
         src/HelloTriangle.h
-        src/HelloTriangle.cpp
-)
+        src/HelloTriangle.cpp)
 
 
-set(VK_INFO
-        src/main3.cpp
-        src/VkInfo.cpp
-        src/LkInstance.cpp
-        src/LkDevice.cpp
-        src/vk.h
-        src/LkSwapChain.cpp
-        src/LkSwapChain.h
-)
-add_executable(triangle src/main2.cpp )
-
-
-target_include_directories(vulkan PUBLIC C:/VulkanSDK/Include)
-
-target_link_libraries(vulkan
-        C:/VulkanSDK/Lib/vulkan-1.lib
-        C:/VulkanSDK/Lib/glfw/glfw3.lib
-        )
-
-target_include_directories(triangle PUBLIC C:/VulkanSDK/Include)
-target_link_libraries(triangle
-        C:/VulkanSDK/Lib/vulkan-1.lib
-        C:/VulkanSDK/Lib/glfw/glfw3.lib )
 
 add_custom_command(TARGET vulkan POST_BUILD
         COMMAND  ${CMAKE_COMMAND} ARGS -E make_directory ${CMAKE_BINARY_DIR}/shaders)
@@ -66,35 +49,24 @@ set(VK_INFO
         src/main3.cpp
         src/VkInfo.cpp
         src/LkInstance.cpp
-        src/LkDevice.cpp
-        src/vulkan_context.cpp
-        src/vulkan_context.h
-)
+        src/LkDevice.cpp)
 
 add_executable(vk_info ${VK_INFO})
 target_include_directories(vk_info PUBLIC VulkanSDKInclude)
 target_link_libraries(vk_info
         VulkanSDKLib
-        C:/VulkanSDK/Lib/glfw/glfw3.lib
-)
+        C:/VulkanSDK/Lib/glfw/glfw3.lib)
+
 
 set(VK_INFO2
-        src/main4.cpp
-        src/functions.cpp
-        src/system_info.cpp
-        src/instance.cpp
-        src/device.cpp
-        src/feature_chain.cpp
-        src/swapchain.cpp
-        src/render_context.cpp
-        src/vulkan_context.cpp
-        src/simple_draw.cpp
-)
+        src/main4.cpp)
 
 add_executable(vk_info2 ${VK_INFO2})
-target_include_directories(vk_info2 PUBLIC C:/VulkanSDK/Include vma)
+target_include_directories(vk_info2 PUBLIC framework)
 target_link_libraries(vk_info2
-        C:/VulkanSDK/Lib/vulkan-1.lib
         C:/VulkanSDK/Lib/glfw/glfw3.lib
+        framework
+        lvk
 )
+
 

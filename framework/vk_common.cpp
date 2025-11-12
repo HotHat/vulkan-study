@@ -646,7 +646,8 @@ VkImageCompressionPropertiesEXT query_supported_fixed_rate_compression(VkPhysica
 	VkImageFormatProperties2 image_format_properties{VK_STRUCTURE_TYPE_IMAGE_FORMAT_PROPERTIES_2};
 	image_format_properties.pNext = &supported_compression_properties;
 
-	vkGetPhysicalDeviceImageFormatProperties2KHR(gpu, &image_format_info, &image_format_properties);
+
+	// vkGetPhysicalDeviceImageFormatProperties2KHR(gpu, &image_format_info, &image_format_properties);
 
 	return supported_compression_properties;
 }
@@ -662,7 +663,7 @@ VkImageCompressionPropertiesEXT query_applied_compression(VkDevice device, VkIma
 	VkSubresourceLayout2EXT         subresource_layout{VK_STRUCTURE_TYPE_SUBRESOURCE_LAYOUT_2_KHR};
 	subresource_layout.pNext = &compression_properties;
 
-	vkGetImageSubresourceLayout2EXT(device, image, &image_subresource, &subresource_layout);
+	// vkGetImageSubresourceLayout2EXT(device, image, &image_subresource, &subresource_layout);
 
 	return compression_properties;
 }

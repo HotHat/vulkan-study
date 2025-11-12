@@ -18,7 +18,7 @@
 
 #pragma once
 
-// #include "common/error.h"
+#include "common/error.h"
 #include "vulkan_resource.h"
 #include <vector>
 #include <vma/vk_mem_alloc.h>

@@ -26,8 +26,12 @@
 #include <unordered_map>
 #include <vector>
 
-#include <vma/vk_mem_alloc.h>
-#include <Volk/volk.h>
+// #define VMA_IMPLEMENTATION
+// #include <vma/vk_mem_alloc.h>
+// #include <Volk/volk.h>
+// #define VULKAN_HPP_DISPATCH_LOADER_DYNAMIC 1
+#include <vulkan/vulkan.hpp>
+// VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 
 #define VK_FLAGS_NONE 0        // Custom define for better code readability
 

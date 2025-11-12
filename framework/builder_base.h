@@ -20,6 +20,7 @@
 
 #include "vk_common.h"
 #include "vulkan_type_mapping.h"
+
 #include <vulkan/vulkan.hpp>
 
 namespace vkb
