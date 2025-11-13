@@ -53,7 +53,7 @@ Instance InstanceBuilder::Build() const {
     auto system = SystemInfo::get_system_info();
 
 
-    uint32_t instance_version = VK_API_VERSION_1_0;
+    uint32_t instance_version = VK_API_VERSION_1_1;
 
     if (info.minimum_instance_version > VK_API_VERSION_1_0 || info.required_api_version > VK_API_VERSION_1_0) {
 
@@ -78,7 +78,7 @@ Instance InstanceBuilder::Build() const {
     }
 
     // The API version to use is set by required_api_version, unless it isn't set, then it comes from minimum_instance_version
-    uint32_t api_version = VK_API_VERSION_1_0;
+    uint32_t api_version = VK_API_VERSION_1_1;
     if (info.required_api_version > VK_API_VERSION_1_0) {
         api_version = info.required_api_version;
     } else if (info.minimum_instance_version > 0) {

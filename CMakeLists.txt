@@ -8,14 +8,12 @@ set(VulkanSDK C:/VulkanSDK)
 set(VulkanSDKInclude ${VulkanSDK}/Include)
 set(VulkanSDKLibDir ${VulkanSDK}/Lib)
 set(VulkanSDKLib ${VulkanSDK}/Lib/vulkan-1.lib)
-set(VolkLib ${VulkanSDK}/Lib/volk.lib)
-set(VolkdLib ${VulkanSDK}/Lib/volkd.lib)
 
 # Add third party libraries
 add_subdirectory(third_party)
 
 # Add core
-add_subdirectory(framework)
+#add_subdirectory(framework)
 
 # Add lvk
 add_subdirectory(lvk)
@@ -65,7 +63,6 @@ add_executable(vk_info2 ${VK_INFO2})
 target_include_directories(vk_info2 PUBLIC framework)
 target_link_libraries(vk_info2
         C:/VulkanSDK/Lib/glfw/glfw3.lib
-        framework
         lvk
 )
 

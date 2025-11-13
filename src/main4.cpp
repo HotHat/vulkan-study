@@ -11,6 +11,10 @@
 #include <render_context.h>
 #include <simple_draw.h>
 
+// #include <buffer.h>
+
+#include <glm/glm.hpp>
+#include "allocator.h"
 
 const int MAX_FRAMES_IN_FLIGHT = 2;
 
@@ -304,6 +308,11 @@ void cleanup(Init &init, lvk::RenderContext &context) {
     glfwTerminate();
 }
 
+struct Vertex {
+    glm::vec2 pos;
+    glm::vec3 color;
+};
+
 int main() {
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -396,6 +405,44 @@ int main() {
     device_initialization(init);
     // create_swapchain(init.context);
 
+    const std::vector<Vertex> vertices = {
+            {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+            {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+            {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+            {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
+    };
+
+    const std::vector<uint16_t> indices = {
+            0, 1, 2, 2, 3, 0
+    };
+    uint32_t vertice_size =   sizeof(vertices[0]) * vertices.size();
+    uint32_t indices_size =   sizeof(indices[0]) * indices.size();
+    lvk::Allocator allocator(init.context);
+    auto verticeBuffer = allocator.CreateBuffer(vertice_size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+    auto indicesBuffer = allocator.CreateBuffer(indices_size, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+
+    verticeBuffer.CopyData(vertice_size, (void *) vertices.data());
+    verticeBuffer.Flush();
+    // vkb::allocated::init(init.context.device.device);
+    // auto device_hpp = vk::Device(init.context.device.device);
+
+    // auto device_resource = vkb::core::VulkanResource<vkb::BindingType::Cpp,  vk::Device>(device_hpp);
+    // device_resource.set_debug_name("");
+
+
+   // auto device = std::make_unique<vkb::Device>(init.context.device.physical_device,
+   //                                       static_cast<VkSurfaceKHR>(init.context.surface),
+   //                                             std::unique_ptr<vkb::DebugUtils>({}),
+   //                                       lvk::SystemInfo::get_system_info().available_extensions);
+    // vkb::core::BufferBuilderC buffer_builder(sizeof(vertices[0]) * vertices.size());
+    // auto buffer = buffer_builder
+    //         .with_vma_preferred_flags(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT)
+    //         .with_usage(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
+            // .get_create_info();
+            // .with_sharing_mode(VK_SHARING_MODE_EXCLUSIVE)
+            // .build(device_resource);
+
+
     init.context.create_swapchain();
 
     lvk::SimpleDraw simple_draw(init.context);
@@ -427,6 +474,10 @@ int main() {
 
     vkDeviceWaitIdle(init.context.device.device );
 
+    verticeBuffer.Destroy();
+    indicesBuffer.Destroy();
+    
+    allocator.Destroy();
     cleanup(init, render);
 
     return EXIT_SUCCESS;

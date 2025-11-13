@@ -24,17 +24,25 @@ set(LVK_FILES
         system_info.cpp
         vulkan_context.cpp
         swapchain.cpp
+        //
+        allocator.cpp
+        allocator.h
+        buffer.h
 )
 
 set(PROJECT_FILES
-        ${LVK_FILES})
+        ${LVK_FILES}
+)
 
 #NB: switch this to shared library and things stop working. (there is likely two copies of volk somewhere.
 add_library(${PROJECT_NAME} OBJECT ${PROJECT_FILES})
 set_target_properties(${PROJECT_NAME} PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 # include
-target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} )
+target_include_directories(${PROJECT_NAME} PUBLIC
+        ${VulkanSDKInclude}
+        ${CMAKE_CURRENT_SOURCE_DIR} )
 
-target_link_libraries(${PROJECT_NAME} PUBLIC framework)
+target_link_libraries(${PROJECT_NAME} PUBLIC
+        ${VulkanSDKLib})
 
