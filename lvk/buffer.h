@@ -16,6 +16,7 @@ struct Buffer{
     {}
 
     void Destroy() const {
+        // vmaUnmapMemory(allocator, allocation);
         vmaDestroyBuffer(allocator, buffer, allocation);
     }
 
@@ -26,8 +27,8 @@ struct Buffer{
         vmaUnmapMemory(allocator, allocation);
     }
 
-    void Flush() {
-        vmaFreeMemoryPages(allocator, 1, &allocation);
+    void Flush(VkDeviceSize offset, VkDeviceSize size) {
+        vmaFlushAllocation(allocator, allocation, offset, size);
     }
 
     // ~Buffer() {

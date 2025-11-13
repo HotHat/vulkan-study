@@ -422,7 +422,7 @@ int main() {
     auto indicesBuffer = allocator.CreateBuffer(indices_size, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 
     verticeBuffer.CopyData(vertice_size, (void *) vertices.data());
-    verticeBuffer.Flush();
+    verticeBuffer.Flush(0, vertice_size);
     // vkb::allocated::init(init.context.device.device);
     // auto device_hpp = vk::Device(init.context.device.device);
 
