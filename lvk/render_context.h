@@ -5,6 +5,8 @@
 #ifndef LYH_RENDER_CONTEXT_H
 #define LYH_RENDER_CONTEXT_H
 
+#include <functional>
+
 #include "vulkan_context.h"
 #include <vulkan/vulkan.h>
 #include <vector>
@@ -39,6 +41,7 @@ struct RenderContext {
     std::vector<VkFence> in_flight_fences;
     std::vector<VkFence> image_in_flight;
     size_t current_frame = 0;
+    uint32_t image_index = 0;
 
     uint8_t max_frames_in_flight = 3;
 
@@ -50,12 +53,18 @@ struct RenderContext {
     void recreate_swapchain();
 
     void rendering();
+    void rendering(void(*)(RenderContext &, uint32_t) );
+    void RenderBegin();
+    void RenderEnd();
+
     void reset_swapchain(Swapchain swapchain_);
     // void reset_context(VulkanContext context_);
     // void create_swapchain();
     void create_framebuffers();
     void create_command_pool();
     void create_sync_objects();
+    void create_command_buffers();
+
     void clearup();
 };
 

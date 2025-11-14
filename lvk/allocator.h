@@ -17,7 +17,7 @@ public:
     void Destroy();
     ~Allocator();
 
-    Buffer CreateBuffer(VkDeviceSize size_, uint32_t usage_, VmaMemoryUsage memory_);
+    std::unique_ptr<Buffer> CreateBuffer(VkDeviceSize size_, uint32_t usage_, VmaMemoryUsage memory_);
 
 private:
     VmaAllocator allocator{};

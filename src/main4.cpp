@@ -69,7 +69,8 @@ int device_initialization(Init &init) {
 
     VkSurfaceKHR surface = VK_NULL_HANDLE;
 
-    VkResult glfw_result = glfwCreateWindowSurface(init.context.instance.instance, init.window, nullptr, &init.context.surface);
+    VkResult glfw_result = glfwCreateWindowSurface(init.context.instance.instance, init.window, nullptr,
+                                                   &init.context.surface);
     if (glfw_result != VK_SUCCESS) {
         std::cerr << "Failed to select create window surface. Error: " << std::to_string(glfw_result) << "\n";
         return EXIT_FAILURE;
@@ -147,8 +148,6 @@ int create_render_pass(Init &init, RenderData &data) {
 }
 
 
-
-
 void create_command_buffers_v2(lvk::RenderContext &ctx) {
     ctx.command_buffers.resize(ctx.framebuffers.size());
 
@@ -184,13 +183,14 @@ void create_command_buffers_v2(lvk::RenderContext &ctx) {
         viewport.x = 0.0f;
         viewport.y = 0.0f;
         viewport.width = static_cast<float>(ctx.context.swapchain.extent.width);
-        viewport.height = static_cast<float>(ctx.context.swapchain.extent.height);
+        viewport.height = static_cast<float>(ctx.context.swapchain.extent.height / 2);
         viewport.minDepth = 0.0f;
         viewport.maxDepth = 1.0f;
 
         VkRect2D scissor = {};
         scissor.offset = {0, 0};
-        scissor.extent = ctx.context.swapchain.extent;
+        scissor.extent.width = ctx.context.swapchain.extent.width;
+        scissor.extent.height = ctx.context.swapchain.extent.height / 2;
 
         vkCmdSetViewport(ctx.command_buffers[i], 0, 1, &viewport);
         vkCmdSetScissor(ctx.command_buffers[i], 0, 1, &scissor);
@@ -207,6 +207,64 @@ void create_command_buffers_v2(lvk::RenderContext &ctx) {
             std::cout << "failed to record command buffer\n";
             throw std::runtime_error("failed to record command buffer");
         }
+    }
+}
+
+
+void create_command_buffers_v3(lvk::RenderContext &ctx, uint32_t image_index) {
+    // VkCommandBufferAllocateInfo allocInfo = {};
+    // allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    // allocInfo.commandPool = ctx.command_pool;
+    // allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    // allocInfo.commandBufferCount = 1;
+
+    // if (vkAllocateCommandBuffers(ctx.context.device.device, &allocInfo, &ctx.command_buffers[image_index]) != VK_SUCCESS) {
+    //     throw std::runtime_error("failed to allocate command buffers");
+    // }
+
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+
+    auto commandBuffer = ctx.command_buffers[image_index];
+
+    if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
+        throw std::runtime_error("failed to begin recording command buffer!");
+    }
+
+    VkRenderPassBeginInfo renderPassInfo{};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    renderPassInfo.renderPass = ctx.render_pass;
+    renderPassInfo.framebuffer = ctx.framebuffers[image_index];
+    renderPassInfo.renderArea.offset = {0, 0};
+    renderPassInfo.renderArea.extent = ctx.context.swapchain.extent;
+
+    VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
+    renderPassInfo.clearValueCount = 1;
+    renderPassInfo.pClearValues = &clearColor;
+
+    vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, ctx.graphics_pipeline);
+
+    VkViewport viewport{};
+    viewport.x = 0.0f;
+    viewport.y = 0.0f;
+    viewport.width = static_cast<float>(ctx.context.swapchain.extent.width);
+    viewport.height = static_cast<float>(ctx.context.swapchain.extent.height);
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+    vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+
+    VkRect2D scissor{};
+    scissor.offset = {0, 0};
+    scissor.extent = ctx.context.swapchain.extent;
+    vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+    vkCmdDraw(commandBuffer, 3, 1, 0, 0);
+
+    vkCmdEndRenderPass(commandBuffer);
+
+    if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
+        throw std::runtime_error("failed to record command buffer!");
     }
 }
 
@@ -390,39 +448,43 @@ int main() {
 
     Init init;
     // RenderData render_data;
-/*
-    device_initialization(init);
-    create_swapchain(init);
-    get_queues(init, render_data);
-    create_render_pass(init, render_data);
-    create_graphics_pipeline(init, render_data);
-    create_framebuffers(init, render_data);
-    create_command_pool(init, render_data);
-    create_command_buffers(init, render_data);
-    create_sync_objects(init, render_data);
-*/
+    /*
+        device_initialization(init);
+        create_swapchain(init);
+        get_queues(init, render_data);
+        create_render_pass(init, render_data);
+        create_graphics_pipeline(init, render_data);
+        create_framebuffers(init, render_data);
+        create_command_pool(init, render_data);
+        create_command_buffers(init, render_data);
+        create_sync_objects(init, render_data);
+    */
 
     device_initialization(init);
     // create_swapchain(init.context);
 
     const std::vector<Vertex> vertices = {
-            {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-            {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
-            {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
-            {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
+        {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+        {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+        {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+        {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
     };
 
     const std::vector<uint16_t> indices = {
-            0, 1, 2, 2, 3, 0
+        0, 1, 2, 2, 3, 0
     };
-    uint32_t vertice_size =   sizeof(vertices[0]) * vertices.size();
-    uint32_t indices_size =   sizeof(indices[0]) * indices.size();
+    uint32_t vertice_size = sizeof(vertices[0]) * vertices.size();
+    uint32_t indices_size = sizeof(indices[0]) * indices.size();
     lvk::Allocator allocator(init.context);
-    auto verticeBuffer = allocator.CreateBuffer(vertice_size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
-    auto indicesBuffer = allocator.CreateBuffer(indices_size, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+    auto verticeBuffer = allocator.CreateBuffer(vertice_size,
+                                                VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                                                VMA_MEMORY_USAGE_CPU_TO_GPU);
+    auto indicesBuffer = allocator.CreateBuffer(indices_size,
+                                                VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                                                VMA_MEMORY_USAGE_CPU_TO_GPU);
 
-    verticeBuffer.CopyData(vertice_size, (void *) vertices.data());
-    verticeBuffer.Flush(0, vertice_size);
+    verticeBuffer->CopyData(vertice_size, (void *) vertices.data());
+    verticeBuffer->Flush(0, vertice_size);
     // vkb::allocated::init(init.context.device.device);
     // auto device_hpp = vk::Device(init.context.device.device);
 
@@ -430,23 +492,24 @@ int main() {
     // device_resource.set_debug_name("");
 
 
-   // auto device = std::make_unique<vkb::Device>(init.context.device.physical_device,
-   //                                       static_cast<VkSurfaceKHR>(init.context.surface),
-   //                                             std::unique_ptr<vkb::DebugUtils>({}),
-   //                                       lvk::SystemInfo::get_system_info().available_extensions);
+    // auto device = std::make_unique<vkb::Device>(init.context.device.physical_device,
+    //                                       static_cast<VkSurfaceKHR>(init.context.surface),
+    //                                             std::unique_ptr<vkb::DebugUtils>({}),
+    //                                       lvk::SystemInfo::get_system_info().available_extensions);
     // vkb::core::BufferBuilderC buffer_builder(sizeof(vertices[0]) * vertices.size());
     // auto buffer = buffer_builder
     //         .with_vma_preferred_flags(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT)
     //         .with_usage(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
-            // .get_create_info();
-            // .with_sharing_mode(VK_SHARING_MODE_EXCLUSIVE)
-            // .build(device_resource);
+    // .get_create_info();
+    // .with_sharing_mode(VK_SHARING_MODE_EXCLUSIVE)
+    // .build(device_resource);
 
 
     init.context.create_swapchain();
 
     lvk::SimpleDraw simple_draw(init.context);
-    lvk::RenderContext render(init.context, simple_draw.render_pass, simple_draw.pipeline_layout, simple_draw.graphics_pipeline);
+    lvk::RenderContext render(init.context, simple_draw.render_pass, simple_draw.pipeline_layout,
+                              simple_draw.graphics_pipeline);
 
     // create_render_pass(init, render_data);
     // create_graphics_pipeline(init, render_data);
@@ -460,6 +523,10 @@ int main() {
 
     // create_command_buffers_v2(render);
 
+    // auto draw = [*render](uint32_t current_frame) {
+    // create_command_buffers_v3(*shared_data, current_frame);
+    // };
+
     while (!glfwWindowShouldClose(init.window)) {
         glfwPollEvents();
         // int res = draw_frame(render);
@@ -467,17 +534,27 @@ int main() {
         //     std::cout << "failed to draw frame \n";
         //     return -1;
         // }
-        create_command_buffers_v2(render);
+        // create_command_buffers_v2(render);
+        // create_command_buffers_v3(render);
 
-        render.rendering();
+        // render.rendering();
+        render.rendering(create_command_buffers_v3);
+
+        // render.RenderBegin();
+        // create_command_buffers_v2(render);
+        // create_command_buffers_v3(render, render.image_index);
+        // render.RenderEnd();
     }
 
-    vkDeviceWaitIdle(init.context.device.device );
+
+    vkDeviceWaitIdle(init.context.device.device);
 
     verticeBuffer.Destroy();
     indicesBuffer.Destroy();
-    
+
     allocator.Destroy();
+
+
     cleanup(init, render);
 
     return EXIT_SUCCESS;

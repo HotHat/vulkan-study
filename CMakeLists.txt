@@ -60,10 +60,19 @@ set(VK_INFO2
         src/main4.cpp)
 
 add_executable(vk_info2 ${VK_INFO2})
-target_include_directories(vk_info2 PUBLIC framework)
+target_include_directories(vk_info2 PUBLIC lvk)
 target_link_libraries(vk_info2
         C:/VulkanSDK/Lib/glfw/glfw3.lib
         lvk
 )
 
 
+set(VK_INFO3
+        src/main5.cpp)
+
+add_executable(vk_info3 ${VK_INFO3})
+target_include_directories(vk_info3 PUBLIC lvk)
+target_link_libraries(vk_info3
+        C:/VulkanSDK/Lib/glfw/glfw3.lib
+        lvk
+)

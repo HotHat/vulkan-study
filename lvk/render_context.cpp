@@ -3,19 +3,19 @@
 //
 
 #include "render_context.h"
+
+#include <functional>
 #include <stdexcept>
 #include <utility>
 
 namespace lvk {
-
 // RenderContext::RenderContext(VulkanContext &context_): context(context_) {}
 
 RenderContext::RenderContext(VulkanContext &context_, VkRenderPass render_pass_,
                              VkPipelineLayout pipeline_layout_,
-                             VkPipeline graphics_pipeline_):
-        context(context_), render_pass(render_pass_),
-        pipeline_layout(pipeline_layout_), graphics_pipeline(graphics_pipeline_) {
-
+                             VkPipeline graphics_pipeline_) : context(context_), render_pass(render_pass_),
+                                                              pipeline_layout(pipeline_layout_),
+                                                              graphics_pipeline(graphics_pipeline_) {
     max_frames_in_flight = 3;
 
     graphics_queue = context.device.GetQueue(lvk::QueueType::kGraphics);
@@ -23,6 +23,7 @@ RenderContext::RenderContext(VulkanContext &context_, VkRenderPass render_pass_,
 
     create_framebuffers();
     create_command_pool();
+    create_command_buffers();
     create_sync_objects();
 }
 
@@ -52,11 +53,14 @@ void RenderContext::create_framebuffers() {
             throw std::runtime_error("failed to create framebuffer");
         }
     }
+    command_buffers.resize(framebuffers.size());
 }
 
 void RenderContext::create_command_pool() {
     VkCommandPoolCreateInfo pool_info = {};
     pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    // important for rerecord command
+    pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
     pool_info.queueFamilyIndex = context.device.GetQueueIndex(lvk::QueueType::kGraphics);
 
     if (vkCreateCommandPool(context.device.device, &pool_info, nullptr, &command_pool) != VK_SUCCESS) {
@@ -64,7 +68,19 @@ void RenderContext::create_command_pool() {
     }
 }
 
+void RenderContext::create_command_buffers() {
+    command_buffers.resize(max_frames_in_flight);
 
+    VkCommandBufferAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.commandPool = command_pool;
+    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandBufferCount = static_cast<uint32_t>(command_buffers.size());
+
+    if (vkAllocateCommandBuffers(context.device.device, &allocInfo, command_buffers.data()) != VK_SUCCESS) {
+        throw std::runtime_error("failed to allocate command buffers!");
+    }
+}
 
 void RenderContext::create_sync_objects() {
     available_semaphores.resize(max_frames_in_flight);
@@ -86,7 +102,8 @@ void RenderContext::create_sync_objects() {
     }
 
     for (size_t i = 0; i < max_frames_in_flight; i++) {
-        if (vkCreateSemaphore(context.device.device, &semaphore_info, nullptr, &available_semaphores[i]) != VK_SUCCESS ||
+        if (vkCreateSemaphore(context.device.device, &semaphore_info, nullptr, &available_semaphores[i]) != VK_SUCCESS
+            ||
             vkCreateFence(context.device.device, &fence_info, nullptr, &in_flight_fences[i]) != VK_SUCCESS) {
             throw std::runtime_error("failed to create sync objects");
         }
@@ -94,7 +111,6 @@ void RenderContext::create_sync_objects() {
 }
 
 void RenderContext::clearup() {
-
     for (size_t i = 0; i < context.swapchain.image_count; i++) {
         vkDestroySemaphore(context.device.device, finished_semaphore[i], nullptr);
     }
@@ -115,11 +131,10 @@ void RenderContext::clearup() {
 
     context.swapchain.DestroyImageViews(swapchain_image_views);
 
-    lvk::destroy_swapchain(context.swapchain);
-    lvk::destroy_device(context.device);
-    lvk::destroy_surface(context.instance, context.surface);
-    lvk::destroy_instance(context.instance);
-
+    destroy_swapchain(context.swapchain);
+    destroy_device(context.device);
+    destroy_surface(context.instance, context.surface);
+    destroy_instance(context.instance);
 }
 
 void RenderContext::rendering() {
@@ -127,7 +142,8 @@ void RenderContext::rendering() {
 
     uint32_t image_index = 0;
     VkResult result = vkAcquireNextImageKHR(context.device.device,
-                                            context.swapchain.swapchain, UINT64_MAX, available_semaphores[current_frame], VK_NULL_HANDLE, &image_index);
+                                            context.swapchain.swapchain, UINT64_MAX,
+                                            available_semaphores[current_frame], VK_NULL_HANDLE, &image_index);
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR) {
         recreate_swapchain();
@@ -186,6 +202,145 @@ void RenderContext::rendering() {
     current_frame = (current_frame + 1) % max_frames_in_flight;
 }
 
+void RenderContext::rendering(void (draw_record_)(RenderContext &, uint32_t)) {
+    vkWaitForFences(context.device.device, 1, &in_flight_fences[current_frame], VK_TRUE, UINT64_MAX);
+
+    uint32_t image_index = 0;
+    VkResult result = vkAcquireNextImageKHR(context.device.device,
+                                            context.swapchain.swapchain, UINT64_MAX,
+                                            available_semaphores[current_frame], VK_NULL_HANDLE, &image_index);
+
+    if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+        recreate_swapchain();
+    } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
+        throw std::runtime_error("failed to acquire swapchain image. Error " + std::to_string(result));
+    }
+
+    if (image_in_flight[image_index] != VK_NULL_HANDLE) {
+        vkWaitForFences(context.device.device, 1, &image_in_flight[image_index], VK_TRUE, UINT64_MAX);
+    }
+
+    image_in_flight[image_index] = in_flight_fences[current_frame];
+
+    draw_record_(*this, current_frame);
+    vkResetFences(context.device.device, 1, &in_flight_fences[current_frame]);
+    //
+
+    VkSubmitInfo submitInfo = {};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+    VkSemaphore wait_semaphores[] = {available_semaphores[current_frame]};
+    VkPipelineStageFlags wait_stages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+    submitInfo.waitSemaphoreCount = 1;
+    submitInfo.pWaitSemaphores = wait_semaphores;
+    submitInfo.pWaitDstStageMask = wait_stages;
+
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &command_buffers[image_index];
+
+    VkSemaphore signal_semaphores[] = {finished_semaphore[image_index]};
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores = signal_semaphores;
+
+
+    if (vkQueueSubmit(graphics_queue, 1, &submitInfo, in_flight_fences[current_frame]) !=
+        VK_SUCCESS) {
+        throw std::runtime_error("failed to submit draw command buffer");
+    }
+
+    VkPresentInfoKHR present_info = {};
+    present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+
+    present_info.waitSemaphoreCount = 1;
+    present_info.pWaitSemaphores = signal_semaphores;
+
+    VkSwapchainKHR swapChains[] = {context.swapchain.swapchain};
+    present_info.swapchainCount = 1;
+    present_info.pSwapchains = swapChains;
+
+    present_info.pImageIndices = &image_index;
+
+    result = vkQueuePresentKHR(present_queue, &present_info);
+    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+        recreate_swapchain();
+    } else if (result != VK_SUCCESS) {
+        throw std::runtime_error("failed to present swapchain image\n");
+    }
+
+    current_frame = (current_frame + 1) % max_frames_in_flight;
+}
+
+void RenderContext::RenderBegin() {
+    vkWaitForFences(context.device.device, 1, &in_flight_fences[current_frame], VK_TRUE, UINT64_MAX);
+
+    VkResult result = vkAcquireNextImageKHR(context.device.device,
+                                            context.swapchain.swapchain, UINT64_MAX,
+                                            available_semaphores[current_frame], VK_NULL_HANDLE, &image_index);
+
+    if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+        recreate_swapchain();
+    } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
+        throw std::runtime_error("failed to acquire swapchain image. Error " + std::to_string(result));
+    }
+
+    if (image_in_flight[image_index] != VK_NULL_HANDLE) {
+        vkWaitForFences(context.device.device, 1, &image_in_flight[image_index], VK_TRUE, UINT64_MAX);
+    }
+
+    image_in_flight[image_index] = in_flight_fences[current_frame];
+
+    vkResetFences(context.device.device, 1, &in_flight_fences[current_frame]);
+}
+
+void RenderContext::RenderEnd() {
+    //
+    VkResult result;
+
+    VkSubmitInfo submitInfo = {};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+    VkSemaphore wait_semaphores[] = {available_semaphores[current_frame]};
+    VkPipelineStageFlags wait_stages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+    submitInfo.waitSemaphoreCount = 1;
+    submitInfo.pWaitSemaphores = wait_semaphores;
+    submitInfo.pWaitDstStageMask = wait_stages;
+
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &command_buffers[image_index];
+
+    VkSemaphore signal_semaphores[] = {finished_semaphore[image_index]};
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores = signal_semaphores;
+
+
+    if (vkQueueSubmit(graphics_queue, 1, &submitInfo, in_flight_fences[current_frame]) !=
+        VK_SUCCESS) {
+        throw std::runtime_error("failed to submit draw command buffer");
+    }
+
+    VkPresentInfoKHR present_info = {};
+    present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+
+    present_info.waitSemaphoreCount = 1;
+    present_info.pWaitSemaphores = signal_semaphores;
+
+    VkSwapchainKHR swapChains[] = {context.swapchain.swapchain};
+    present_info.swapchainCount = 1;
+    present_info.pSwapchains = swapChains;
+
+    present_info.pImageIndices = &image_index;
+
+    result = vkQueuePresentKHR(present_queue, &present_info);
+    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+        recreate_swapchain();
+    } else if (result != VK_SUCCESS) {
+        throw std::runtime_error("failed to present swapchain image\n");
+    }
+
+    current_frame = (current_frame + 1) % max_frames_in_flight;
+}
+
+
 void RenderContext::recreate_swapchain() {
     vkDeviceWaitIdle(context.device.device);
 
@@ -208,5 +363,4 @@ void RenderContext::recreate_swapchain() {
     // if (0 != create_command_pool(init, data)) return -1;
     // if (0 != create_command_buffers(init, data)) return -1;
 }
-
 } // end namespace lvk

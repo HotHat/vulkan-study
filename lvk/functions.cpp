@@ -5,6 +5,7 @@
 #include <cassert>
 #include "functions.h"
 #include <algorithm>
+#include <fstream>
 
 namespace lvk {
 
@@ -183,4 +184,37 @@ VulkanFunctions& vulkan_functions() {
     v.init_vulkan_funcs();
     return v;
 }
+
+VkShaderModule CreateShaderModule(VkDevice device_, const std::vector<char> &code) {
+    VkShaderModuleCreateInfo create_info = {};
+    create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    create_info.codeSize = code.size();
+    create_info.pCode = reinterpret_cast<const uint32_t *>(code.data());
+
+    VkShaderModule shaderModule;
+    if (vkCreateShaderModule(device_, &create_info, nullptr, &shaderModule) != VK_SUCCESS) {
+        return VK_NULL_HANDLE; // failed to create shader module
+    }
+
+    return shaderModule;
+}
+
+std::vector<char> ReadFile(const std::string &filename) {
+    std::ifstream file(filename, std::ios::ate | std::ios::binary);
+
+    if (!file.is_open()) {
+        throw std::runtime_error("failed to open file!");
+    }
+
+    size_t file_size = (size_t) file.tellg();
+    std::vector<char> buffer(file_size);
+
+    file.seekg(0);
+    file.read(buffer.data(), static_cast<std::streamsize>(file_size));
+
+    file.close();
+
+    return buffer;
+}
+
 } // end namespace lvk

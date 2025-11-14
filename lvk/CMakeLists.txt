@@ -24,7 +24,7 @@ set(LVK_FILES
         system_info.cpp
         vulkan_context.cpp
         swapchain.cpp
-        //
+        #
         allocator.cpp
         allocator.h
         buffer.h
@@ -32,6 +32,8 @@ set(LVK_FILES
 
 set(PROJECT_FILES
         ${LVK_FILES}
+        draw_model.cpp
+        draw_model.h
 )
 
 #NB: switch this to shared library and things stop working. (there is likely two copies of volk somewhere.

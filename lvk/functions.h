@@ -201,5 +201,10 @@ public:
 
 VulkanFunctions& vulkan_functions();
 
+
+
+VkShaderModule CreateShaderModule(VkDevice device_, const std::vector<char> &code);
+std::vector<char> ReadFile(const std::string &filename);
+
 } // end of namespace lvk
 #endif //LVK_FUNCTIONS_H

@@ -5,6 +5,7 @@
 #ifndef LYH_BUFFER_H
 #define LYH_BUFFER_H
 #include <vulkan/vulkan.h>
+#include <vma/vk_mem_alloc.h>
 
 namespace lvk {
 
@@ -15,19 +16,37 @@ struct Buffer{
             allocation(allocation_)
     {}
 
+    // The Move Constructor
+    Buffer(Buffer&& other) noexcept
+        : allocator(other.allocator),
+          buffer(other.buffer),
+          allocation(other.allocation)
+    {
+    }
+    // The Move Assignment Operator
+    Buffer& operator=(Buffer&& other) noexcept {
+        if (this != &other) {
+            allocator = other.allocator;
+            buffer = other.buffer;
+            allocation = other.allocation;
+        }
+
+        return *this;
+    }
+
     void Destroy() const {
         // vmaUnmapMemory(allocator, allocation);
         vmaDestroyBuffer(allocator, buffer, allocation);
     }
 
-    void CopyData(uint32_t size, void *data) {
+    void CopyData(uint32_t size, void *data) const {
         void* mappedData;
         vmaMapMemory(allocator, allocation, &mappedData);
         memcpy(mappedData, data, size);
         vmaUnmapMemory(allocator, allocation);
     }
 
-    void Flush(VkDeviceSize offset, VkDeviceSize size) {
+    void Flush(VkDeviceSize offset, VkDeviceSize size) const {
         vmaFlushAllocation(allocator, allocation, offset, size);
     }
 

@@ -28,7 +28,7 @@ Allocator::~Allocator() {
     // vmaDestroyAllocator(allocator);
 }
 
-Buffer Allocator::CreateBuffer(VkDeviceSize size_, uint32_t usage_, VmaMemoryUsage memory_) {
+std::unique_ptr<Buffer> Allocator::CreateBuffer(VkDeviceSize size_, uint32_t usage_, VmaMemoryUsage memory_) {
     VkBufferCreateInfo bufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
     bufferInfo.size = size_;
     bufferInfo.usage = usage_;
@@ -41,7 +41,7 @@ Buffer Allocator::CreateBuffer(VkDeviceSize size_, uint32_t usage_, VmaMemoryUsa
     VmaAllocation allocation;
     vmaCreateBuffer(allocator, &bufferInfo, &allocInfo, &buffer, &allocation, nullptr);
 
-    return Buffer(allocator, buffer, allocation);
+    return std::make_unique<Buffer>(allocator, buffer, allocation);
 }
 
 void Allocator::Destroy() {
