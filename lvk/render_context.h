@@ -40,7 +40,7 @@ struct RenderContext {
     std::vector<VkSemaphore> finished_semaphore;
     std::vector<VkFence> in_flight_fences;
     std::vector<VkFence> image_in_flight;
-    size_t current_frame = 0;
+    uint32_t current_frame = 0;
     uint32_t image_index = 0;
 
     uint8_t max_frames_in_flight = 3;

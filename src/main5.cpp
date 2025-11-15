@@ -24,6 +24,7 @@ struct Init {
 
 int device_initialization(Init &init) {
     init.window = glfwCreateWindow(800, 600, "Hello World!", nullptr, nullptr);
+    init.context.window = init.window;
 
     // 1. Get the number of required instance extensions
     uint32_t count = 0;

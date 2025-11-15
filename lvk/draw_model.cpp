@@ -50,17 +50,19 @@ void DrawModel::destroy() {
     vertice_buffer->Destroy();
     indices_buffer->Destroy();
     allocator->Destroy();
+    vkDestroyPipeline(context.device.device, graphics_pipeline, nullptr);
+    vkDestroyPipelineLayout(context.device.device, pipeline_layout, nullptr);
 }
 
 void DrawModel::draw(RenderContext &context) {
 
-    auto current_frame_ = context.current_frame;
+    auto current_frame_ = context.image_index;
 
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
     auto commandBuffer = context.command_buffers[current_frame_];
-
+    // vkResetCommandBuffer(commandBuffer, 0);
     if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
         throw std::runtime_error("failed to begin recording command buffer!");
     }

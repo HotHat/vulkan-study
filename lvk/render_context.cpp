@@ -204,9 +204,9 @@ void RenderContext::rendering() {
 }
 
 void RenderContext::rendering(const std::function<void(RenderContext &)>& draw_record) {
-    vkWaitForFences(context.device.device, 1, &in_flight_fences[current_frame], VK_TRUE, UINT64_MAX);
+    vkWaitForFences(context.device.device, 1, &in_flight_fences[image_index], VK_TRUE, UINT64_MAX);
 
-    uint32_t image_index = 0;
+    // uint32_t image_index = 0;
     VkResult result = vkAcquireNextImageKHR(context.device.device,
                                             context.swapchain.swapchain, UINT64_MAX,
                                             available_semaphores[current_frame], VK_NULL_HANDLE, &image_index);
@@ -219,14 +219,17 @@ void RenderContext::rendering(const std::function<void(RenderContext &)>& draw_r
         throw std::runtime_error("failed to acquire swapchain image. Error " + std::to_string(result));
     }
 
+
+
     if (image_in_flight[image_index] != VK_NULL_HANDLE) {
         vkWaitForFences(context.device.device, 1, &image_in_flight[image_index], VK_TRUE, UINT64_MAX);
     }
 
+
     image_in_flight[image_index] = in_flight_fences[current_frame];
+    vkResetFences(context.device.device, 1, &in_flight_fences[current_frame]);
 
     //
-    vkResetFences(context.device.device, 1, &in_flight_fences[current_frame]);
     draw_record(*this);
 
     //
@@ -243,7 +246,7 @@ void RenderContext::rendering(const std::function<void(RenderContext &)>& draw_r
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &command_buffers[image_index];
 
-    VkSemaphore signal_semaphores[] = {finished_semaphore[image_index]};
+    VkSemaphore signal_semaphores[] = {finished_semaphore[current_frame]};
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signal_semaphores;
 
@@ -349,6 +352,13 @@ void RenderContext::RenderEnd() {
 
 
 void RenderContext::recreate_swapchain() {
+    int width = 0, height = 0;
+    glfwGetFramebufferSize(context.window, &width, &height);
+    while (width == 0 || height == 0) {
+        glfwGetFramebufferSize(context.window, &width, &height);
+        glfwWaitEvents();
+    }
+
     vkDeviceWaitIdle(context.device.device);
 
     vkDestroyCommandPool(context.device.device, command_pool, nullptr);

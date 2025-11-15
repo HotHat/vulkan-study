@@ -5,6 +5,8 @@
 #ifndef LYH_VULKAN_CONTEXT_H
 #define LYH_VULKAN_CONTEXT_H
 
+#include <GLFW/glfw3.h>
+
 #include "system_info.h"
 #include "instance.h"
 #include "device.h"
@@ -21,6 +23,8 @@ struct VulkanContext {
     VkSurfaceKHR surface{};
     Device device {};
     Swapchain swapchain {};
+
+    GLFWwindow *window{};
 };
 
 
