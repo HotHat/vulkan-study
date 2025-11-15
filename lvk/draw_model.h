@@ -20,7 +20,7 @@ struct Vertex {
 
 class DrawModel {
 public:
-    explicit DrawModel(VulkanContext &context_);
+    explicit DrawModel(VulkanContext &context_, VkRenderPass render_pass_);
 
     void load();
 

@@ -15,6 +15,7 @@ namespace lvk {
 struct VulkanContext {
 
     void create_swapchain();
+    VkRenderPass CreateDefaultRenderPass();
 
     Instance instance{};
     VkSurfaceKHR surface{};

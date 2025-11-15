@@ -10,8 +10,8 @@
 #include "functions.h"
 
 namespace lvk {
-DrawModel::DrawModel(VulkanContext &context_) : context(context_) {
-    create_render_pass();
+DrawModel::DrawModel(VulkanContext &context_, VkRenderPass render_pass) : context(context_), render_pass(render_pass) {
+    // create_render_pass();
     create_graphics_pipeline();
     allocator = std::make_unique<Allocator>(context);
 
@@ -78,7 +78,7 @@ void DrawModel::draw(RenderContext &context) {
 
     vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, context.graphics_pipeline);
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline);
 
     VkViewport viewport{};
     viewport.x = 0.0f;

@@ -11,11 +11,12 @@
 namespace lvk {
 // RenderContext::RenderContext(VulkanContext &context_): context(context_) {}
 
-RenderContext::RenderContext(VulkanContext &context_, VkRenderPass render_pass_,
-                             VkPipelineLayout pipeline_layout_,
-                             VkPipeline graphics_pipeline_) : context(context_), render_pass(render_pass_),
-                                                              pipeline_layout(pipeline_layout_),
-                                                              graphics_pipeline(graphics_pipeline_) {
+RenderContext::RenderContext(VulkanContext &context_, VkRenderPass render_pass_) :
+    // VkPipelineLayout pipeline_layout_,
+    // VkPipeline graphics_pipeline_
+    context(context_), render_pass(render_pass_) {
+    // pipeline_layout(pipeline_layout_),
+    // graphics_pipeline(graphics_pipeline_) {
     max_frames_in_flight = 3;
 
     graphics_queue = context.device.GetQueue(lvk::QueueType::kGraphics);
@@ -202,7 +203,7 @@ void RenderContext::rendering() {
     current_frame = (current_frame + 1) % max_frames_in_flight;
 }
 
-void RenderContext::rendering(void (draw_record_)(RenderContext &, uint32_t)) {
+void RenderContext::rendering(const std::function<void(RenderContext &)>& draw_record) {
     vkWaitForFences(context.device.device, 1, &in_flight_fences[current_frame], VK_TRUE, UINT64_MAX);
 
     uint32_t image_index = 0;
@@ -212,7 +213,9 @@ void RenderContext::rendering(void (draw_record_)(RenderContext &, uint32_t)) {
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR) {
         recreate_swapchain();
-    } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
+        return;
+    }
+    if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
         throw std::runtime_error("failed to acquire swapchain image. Error " + std::to_string(result));
     }
 
@@ -222,8 +225,10 @@ void RenderContext::rendering(void (draw_record_)(RenderContext &, uint32_t)) {
 
     image_in_flight[image_index] = in_flight_fences[current_frame];
 
-    draw_record_(*this, current_frame);
+    //
     vkResetFences(context.device.device, 1, &in_flight_fences[current_frame]);
+    draw_record(*this);
+
     //
 
     VkSubmitInfo submitInfo = {};
@@ -263,7 +268,9 @@ void RenderContext::rendering(void (draw_record_)(RenderContext &, uint32_t)) {
     result = vkQueuePresentKHR(present_queue, &present_info);
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
         recreate_swapchain();
-    } else if (result != VK_SUCCESS) {
+        return;
+    }
+    if (result != VK_SUCCESS) {
         throw std::runtime_error("failed to present swapchain image\n");
     }
 
@@ -358,6 +365,7 @@ void RenderContext::recreate_swapchain() {
     context.create_swapchain();
     create_framebuffers();
     create_command_pool();
+    create_command_buffers();
 
     // if (0 != create_framebuffers(init, data)) return -1;
     // if (0 != create_command_pool(init, data)) return -1;

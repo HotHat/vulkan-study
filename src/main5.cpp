@@ -215,24 +215,32 @@ int main() {
 
     // lvk::SimpleDraw simple_draw(init.context);
     // lvk::RenderContext render(init.context, simple_draw.render_pass, simple_draw.pipeline_layout,
-                              // simple_draw.graphics_pipeline);
+    // simple_draw.graphics_pipeline);
 
 
-    lvk::DrawModel model(init.context);
-    lvk::RenderContext render(init.context, model.render_pass, model.pipeline_layout,
-                              model.graphics_pipeline);
+    VkRenderPass render_pass = init.context.CreateDefaultRenderPass();
+
+    lvk::DrawModel model(init.context, render_pass);
+
+    lvk::RenderContext render(init.context, model.render_pass);
 
     model.load();
+
+    auto draw = [&model](lvk::RenderContext &render) {
+        model.draw(render);
+    };
 
     while (!glfwWindowShouldClose(init.window)) {
         glfwPollEvents();
 
-        render.RenderBegin();
+        render.rendering(draw);
+
+        // render.RenderBegin();
         // create_command_buffers_v2(render);
         // create_command_buffers_v3(render, render.image_index);
-        model.draw(render);
+        // model.draw(render);
 
-        render.RenderEnd();
+        // render.RenderEnd();
     }
 
 

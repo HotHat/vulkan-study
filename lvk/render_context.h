@@ -18,9 +18,9 @@ struct RenderContext {
     // explicit RenderContext(VulkanContext &context_);
     explicit RenderContext(
             VulkanContext &context,
-            VkRenderPass render_pass_,
-            VkPipelineLayout pipeline_layout_,
-            VkPipeline graphics_pipeline_
+            VkRenderPass render_pass_
+            // VkPipelineLayout pipeline_layout_,
+            // VkPipeline graphics_pipeline_
     );
     VkQueue graphics_queue{};
     VkQueue present_queue{};
@@ -53,7 +53,7 @@ struct RenderContext {
     void recreate_swapchain();
 
     void rendering();
-    void rendering(void(*)(RenderContext &, uint32_t) );
+    void rendering(const std::function<void(RenderContext &)>&);
     void RenderBegin();
     void RenderEnd();
 
