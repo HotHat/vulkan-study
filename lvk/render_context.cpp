@@ -11,12 +11,9 @@
 namespace lvk {
 // RenderContext::RenderContext(VulkanContext &context_): context(context_) {}
 
-RenderContext::RenderContext(VulkanContext &context_, VkRenderPass render_pass_) :
-    // VkPipelineLayout pipeline_layout_,
-    // VkPipeline graphics_pipeline_
-    context(context_), render_pass(render_pass_) {
-    // pipeline_layout(pipeline_layout_),
-    // graphics_pipeline(graphics_pipeline_) {
+RenderContext::RenderContext(VulkanContext &context) : context(context) {
+
+    render_pass = context.GetDefaultRenderPass();
     max_frames_in_flight = 3;
 
     graphics_queue = context.device.GetQueue(lvk::QueueType::kGraphics);
@@ -111,7 +108,7 @@ void RenderContext::create_sync_objects() {
     }
 }
 
-void RenderContext::clearup() {
+void RenderContext::Cleanup() {
     for (size_t i = 0; i < context.swapchain.image_count; i++) {
         vkDestroySemaphore(context.device.device, finished_semaphore[i], nullptr);
     }
@@ -128,17 +125,17 @@ void RenderContext::clearup() {
 
     vkDestroyPipeline(context.device.device, graphics_pipeline, nullptr);
     vkDestroyPipelineLayout(context.device.device, pipeline_layout, nullptr);
-    vkDestroyRenderPass(context.device.device, render_pass, nullptr);
+    // vkDestroyRenderPass(context.device.device, render_pass, nullptr);
 
     context.swapchain.DestroyImageViews(swapchain_image_views);
 
-    destroy_swapchain(context.swapchain);
-    destroy_device(context.device);
-    destroy_surface(context.instance, context.surface);
-    destroy_instance(context.instance);
+    // destroy_swapchain(context.swapchain);
+    // destroy_device(context.device);
+    // destroy_surface(context.instance, context.surface);
+    // destroy_instance(context.instance);
 }
 
-void RenderContext::rendering() {
+void RenderContext::Rendering() {
     vkWaitForFences(context.device.device, 1, &in_flight_fences[current_frame], VK_TRUE, UINT64_MAX);
 
     uint32_t image_index = 0;
@@ -203,7 +200,7 @@ void RenderContext::rendering() {
     current_frame = (current_frame + 1) % max_frames_in_flight;
 }
 
-void RenderContext::rendering(const std::function<void(RenderContext &)>& draw_record) {
+void RenderContext::Rendering(const std::function<void(RenderContext &)>& draw_record) {
     vkWaitForFences(context.device.device, 1, &in_flight_fences[image_index], VK_TRUE, UINT64_MAX);
 
     // uint32_t image_index = 0;
@@ -281,6 +278,7 @@ void RenderContext::rendering(const std::function<void(RenderContext &)>& draw_r
 }
 
 void RenderContext::RenderBegin() {
+
     vkWaitForFences(context.device.device, 1, &in_flight_fences[current_frame], VK_TRUE, UINT64_MAX);
 
     VkResult result = vkAcquireNextImageKHR(context.device.device,
@@ -289,20 +287,34 @@ void RenderContext::RenderBegin() {
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR) {
         recreate_swapchain();
-    } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
+        return;
+    }
+    if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
         throw std::runtime_error("failed to acquire swapchain image. Error " + std::to_string(result));
+    }
+
+    // vkResetCommandBuffer(commandBuffer, 0);
+
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+
+    if (vkBeginCommandBuffer(command_buffers[image_index], &beginInfo) != VK_SUCCESS) {
+        throw std::runtime_error("failed to begin recording command buffer!");
     }
 
     if (image_in_flight[image_index] != VK_NULL_HANDLE) {
         vkWaitForFences(context.device.device, 1, &image_in_flight[image_index], VK_TRUE, UINT64_MAX);
     }
-
-    image_in_flight[image_index] = in_flight_fences[current_frame];
-
-    vkResetFences(context.device.device, 1, &in_flight_fences[current_frame]);
 }
 
 void RenderContext::RenderEnd() {
+    if (vkEndCommandBuffer(command_buffers[image_index]) != VK_SUCCESS) {
+        throw std::runtime_error("failed to record command buffer!");
+    }
+
+    image_in_flight[image_index] = in_flight_fences[current_frame];
+    vkResetFences(context.device.device, 1, &in_flight_fences[current_frame]);
+
     //
     VkResult result;
 
@@ -318,7 +330,7 @@ void RenderContext::RenderEnd() {
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &command_buffers[image_index];
 
-    VkSemaphore signal_semaphores[] = {finished_semaphore[image_index]};
+    VkSemaphore signal_semaphores[] = {finished_semaphore[current_frame]};
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signal_semaphores;
 
@@ -350,6 +362,61 @@ void RenderContext::RenderEnd() {
     current_frame = (current_frame + 1) % max_frames_in_flight;
 }
 
+void RenderContext::RenderPassBegin() const {
+
+    auto framebuffer = GetCurrentFrameBuffer();
+    // auto commandBuffer = context.command_buffers[current_frame_];
+    auto commandBuffer = GetCurrentCommandBuffer();
+    auto extent = GetExtent();
+
+
+
+    VkRenderPassBeginInfo renderPassInfo{};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    renderPassInfo.renderPass = render_pass;
+    renderPassInfo.framebuffer = framebuffer;
+    renderPassInfo.renderArea.offset = {0, 0};
+    renderPassInfo.renderArea.extent = extent;
+
+    VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
+    renderPassInfo.clearValueCount = 1;
+    renderPassInfo.pClearValues = &clearColor;
+
+    vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+
+    VkViewport viewport{};
+    viewport.x = 0.0f;
+    viewport.y = 0.0f;
+    viewport.width = static_cast<float>(extent.width);
+    viewport.height = static_cast<float>(extent.height);
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+    vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+
+    VkRect2D scissor{};
+    scissor.offset = {0, 0};
+    scissor.extent = extent;
+    vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+}
+
+void RenderContext::RenderPassEnd() const {
+    auto commandBuffer = GetCurrentCommandBuffer();
+    vkCmdEndRenderPass(commandBuffer);
+}
+
+VkCommandBuffer RenderContext::GetCurrentCommandBuffer() const {
+    return command_buffers[image_index];
+}
+
+VkFramebuffer RenderContext::GetCurrentFrameBuffer() const {
+    return framebuffers[image_index];
+}
+
+VkExtent2D RenderContext::GetExtent() const {
+    return context.swapchain.extent;
+}
+
 
 void RenderContext::recreate_swapchain() {
     int width = 0, height = 0;
@@ -372,7 +439,7 @@ void RenderContext::recreate_swapchain() {
     // if (0 != create_swapchain(context)) return ;
     // context.reset_swapchain(init.context.swapchain);
     // create_swapchain();
-    context.create_swapchain();
+    context.CreateSwapchain();
     create_framebuffers();
     create_command_pool();
     create_command_buffers();

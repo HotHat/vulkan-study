@@ -35,6 +35,7 @@ struct Swapchain {
     std::vector<VkImageView> GetImageViews(const void* pNext);
     void DestroyImageViews(size_t count, VkImageView const* image_views) const;
     void DestroyImageViews(std::vector<VkImageView> const& image_views) const;
+    void DestroyImageViews() const;
 
     // A conversion function which allows this Swapchain to be used
     // in places where VkSwapchainKHR would have been used.

@@ -10,19 +10,19 @@
 #include "functions.h"
 
 namespace lvk {
-DrawModel::DrawModel(VulkanContext &context_, VkRenderPass render_pass) : context(context_), render_pass(render_pass) {
+DrawModel::DrawModel(VulkanContext &context) : context(context) {
     // create_render_pass();
+    render_pass = context.GetDefaultRenderPass();
     create_graphics_pipeline();
     allocator = std::make_unique<Allocator>(context);
 
 }
-
-void DrawModel::load() {
+void DrawModel::load2() {
     vertices = {
-        {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-        {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+        {{-0.0f, -0.0f}, {1.0f, 0.0f, 0.0f}},
+        {{0.5f, -0.0f}, {0.0f, 1.0f, 0.0f}},
         {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
-        {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
+        {{-0.0f, 0.5f}, {1.0f, 1.0f, 1.0f}}
     };
 
     indices = {0, 1, 2, 2, 3, 0};
@@ -46,6 +46,34 @@ void DrawModel::load() {
 
 }
 
+void DrawModel::load() {
+    vertices = {
+        {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+        {{0.0f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+        {{0.0f, 0.0f}, {0.0f, 0.0f, 1.0f}},
+        {{-0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}}
+    };
+
+    indices = {0, 1, 2, 2, 3, 0};
+
+    uint32_t vertice_size = sizeof(vertices[0]) * vertices.size();
+    uint32_t indices_size = sizeof(indices[0]) * indices.size();
+
+    vertice_buffer = allocator->CreateBuffer(vertice_size,
+                                             VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                                             VMA_MEMORY_USAGE_CPU_TO_GPU);
+    indices_buffer = allocator->CreateBuffer(indices_size,
+                                             VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                                             VMA_MEMORY_USAGE_CPU_TO_GPU);
+
+
+    vertice_buffer->CopyData(vertice_size, (void *) vertices.data());
+    vertice_buffer->Flush(0, vertice_size);
+
+    indices_buffer->CopyData(indices_size, (void *) indices.data());
+    indices_buffer->Flush(0, indices_size);
+}
+
 void DrawModel::destroy() {
     vertice_buffer->Destroy();
     indices_buffer->Destroy();
@@ -56,48 +84,14 @@ void DrawModel::destroy() {
 
 void DrawModel::draw(RenderContext &context) {
 
-    auto current_frame_ = context.image_index;
+    // auto current_frame_ = context.image_index;
 
-    VkCommandBufferBeginInfo beginInfo{};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-
-    auto commandBuffer = context.command_buffers[current_frame_];
-    // vkResetCommandBuffer(commandBuffer, 0);
-    if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
-        throw std::runtime_error("failed to begin recording command buffer!");
-    }
-
-    VkRenderPassBeginInfo renderPassInfo{};
-    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    renderPassInfo.renderPass = render_pass;
-    renderPassInfo.framebuffer = context.framebuffers[current_frame_];
-    renderPassInfo.renderArea.offset = {0, 0};
-    renderPassInfo.renderArea.extent = context.context.swapchain.extent;
-
-    VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
-    renderPassInfo.clearValueCount = 1;
-    renderPassInfo.pClearValues = &clearColor;
-
-    vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline);
-
-    VkViewport viewport{};
-    viewport.x = 0.0f;
-    viewport.y = 0.0f;
-    viewport.width = (float) context.context.swapchain.extent.width;
-    viewport.height = (float) context.context.swapchain.extent.height;
-    viewport.minDepth = 0.0f;
-    viewport.maxDepth = 1.0f;
-    vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
-
-    VkRect2D scissor{};
-    scissor.offset = {0, 0};
-    scissor.extent = context.context.swapchain.extent;
-    vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+    auto commandBuffer = context.GetCurrentCommandBuffer();
 
     VkBuffer vertexBuffers[] = {vertice_buffer->buffer};
     VkDeviceSize offsets[] = {0};
+
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline);
 
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
 
@@ -105,11 +99,8 @@ void DrawModel::draw(RenderContext &context) {
 
     vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 
-    vkCmdEndRenderPass(commandBuffer);
 
-    if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
-        throw std::runtime_error("failed to record command buffer!");
-    }
+
 }
 
 void DrawModel::create_graphics_pipeline() {

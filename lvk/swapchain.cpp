@@ -277,8 +277,8 @@ Swapchain SwapchainBuilder::Build() const {
 std::vector<VkImage> Swapchain::GetImages() {
     std::vector<VkImage> swapchain_images;
 
-    auto swapchain_images_ret = get_vector<VkImage>(swapchain_images, internal_table.fp_vkGetSwapchainImagesKHR, device, swapchain);
-    if (swapchain_images_ret != VK_SUCCESS) {
+    auto ret = get_vector<VkImage>(swapchain_images, internal_table.fp_vkGetSwapchainImagesKHR, device, swapchain);
+    if (ret != VK_SUCCESS) {
         throw std::runtime_error("failed_get_swapchain_images");
     }
 

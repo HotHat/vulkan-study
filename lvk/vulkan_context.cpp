@@ -4,18 +4,25 @@
 
 #include "vulkan_context.h"
 
-namespace lvk {
+#include <utility>
 
-void VulkanContext::create_swapchain() {
-    lvk::SwapchainBuilder swapchain_builder{device};
+namespace lvk {
+VulkanContext::VulkanContext(GLFWwindow *window, Instance instance, VkSurfaceKHR surface, Device device)
+    : instance(instance), surface(surface), device(std::move(device)), window(window) {
+    CreateSwapchain();
+    createDefaultRenderPass();
+}
+
+void VulkanContext::CreateSwapchain() {
+    SwapchainBuilder swapchain_builder{device};
     auto swapchain_ = swapchain_builder.SetOldSwapchain(swapchain).Build();
 
-    lvk::destroy_swapchain(swapchain);
+    destroy_swapchain(swapchain);
 
     swapchain = swapchain_;
 }
 
-VkRenderPass VulkanContext::CreateDefaultRenderPass() {
+void VulkanContext::createDefaultRenderPass() {
     VkAttachmentDescription color_attachment = {};
     color_attachment.format = swapchain.image_format;
     color_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -52,12 +59,24 @@ VkRenderPass VulkanContext::CreateDefaultRenderPass() {
     render_pass_info.dependencyCount = 1;
     render_pass_info.pDependencies = &dependency;
 
-    VkRenderPass render_pass = {};
+    // VkRenderPass render_pass = {};
     if (vkCreateRenderPass(device.device, &render_pass_info, nullptr, &render_pass) != VK_SUCCESS) {
         throw std::runtime_error("failed to create render pass");
     }
 
+    // return render_pass;
+}
+
+VkRenderPass VulkanContext::GetDefaultRenderPass() const {
     return render_pass;
 }
 
+void VulkanContext::Cleanup() {
+    vkDestroyRenderPass(device.device, render_pass, nullptr);
+
+    destroy_swapchain(swapchain);
+    destroy_device(device);
+    destroy_surface(instance, surface);
+    destroy_instance(instance);
+}
 } // end namespace lvk

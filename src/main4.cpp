@@ -360,7 +360,7 @@ int recreate_swapchain(lvk::RenderContext &ctx) {
 // }
 
 void cleanup(Init &init, lvk::RenderContext &context) {
-    context.clearup();
+    context.Cleanup();
 
     glfwDestroyWindow(init.window);
     glfwTerminate();
@@ -505,7 +505,7 @@ int main() {
     // .build(device_resource);
 
 
-    init.context.create_swapchain();
+    init.context.CreateSwapchain();
 
     lvk::SimpleDraw simple_draw(init.context);
     lvk::RenderContext render(init.context, simple_draw.render_pass, simple_draw.pipeline_layout,

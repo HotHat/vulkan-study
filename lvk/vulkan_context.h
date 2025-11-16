@@ -13,21 +13,24 @@
 #include "swapchain.h"
 
 namespace lvk {
-
 struct VulkanContext {
-
-    void create_swapchain();
-    VkRenderPass CreateDefaultRenderPass();
+    explicit VulkanContext(GLFWwindow *window, Instance instance, VkSurfaceKHR surface, Device device);
+    void CreateSwapchain();
+    [[nodiscard]] VkRenderPass GetDefaultRenderPass() const;
 
     Instance instance{};
     VkSurfaceKHR surface{};
-    Device device {};
-    Swapchain swapchain {};
+    Device device{};
+    Swapchain swapchain{};
+    VkRenderPass render_pass{};
 
     GLFWwindow *window{};
+
+    void Cleanup();
+
+private:
+    void createDefaultRenderPass();
 };
-
-
 } // end namespace lvk
 
 #endif //LYH_VULKAN_CONTEXT_H

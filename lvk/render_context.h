@@ -13,15 +13,33 @@
 
 
 namespace lvk {
-
-struct RenderContext {
-    // explicit RenderContext(VulkanContext &context_);
+class RenderContext {
+public:
     explicit RenderContext(
-            VulkanContext &context,
-            VkRenderPass render_pass_
-            // VkPipelineLayout pipeline_layout_,
-            // VkPipeline graphics_pipeline_
+        VulkanContext &context
     );
+
+    void Rendering();
+    void Rendering(const std::function<void(RenderContext &)> &);
+    void RenderBegin();
+    void RenderEnd();
+    void RenderPassBegin() const;
+    void RenderPassEnd() const;
+    [[nodiscard]] VkCommandBuffer GetCurrentCommandBuffer() const;
+    [[nodiscard]] VkFramebuffer GetCurrentFrameBuffer() const;
+    [[nodiscard]] VkExtent2D GetExtent() const;
+    void Cleanup();
+
+private:
+    void recreate_swapchain();
+    void reset_swapchain(Swapchain swapchain_);
+    // void reset_context(VulkanContext context_);
+    // void create_swapchain();
+    void create_framebuffers();
+    void create_command_pool();
+    void create_sync_objects();
+    void create_command_buffers();
+
     VkQueue graphics_queue{};
     VkQueue present_queue{};
 
@@ -49,23 +67,6 @@ struct RenderContext {
 
     // Swapchain swapchain;
     // Device device;
-    //
-    void recreate_swapchain();
-
-    void rendering();
-    void rendering(const std::function<void(RenderContext &)>&);
-    void RenderBegin();
-    void RenderEnd();
-
-    void reset_swapchain(Swapchain swapchain_);
-    // void reset_context(VulkanContext context_);
-    // void create_swapchain();
-    void create_framebuffers();
-    void create_command_pool();
-    void create_sync_objects();
-    void create_command_buffers();
-
-    void clearup();
 };
 
 } // end namespace lvk
