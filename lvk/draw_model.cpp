@@ -54,9 +54,9 @@ void DrawModel::load2() {
 void DrawModel::load3() {
     vertices = {
         // {{-0.0f, -0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}},
-               // {{0.5f, -0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}},
-               // {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}},
-               // {{-0.0f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}}
+        // {{0.5f, -0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}},
+        // {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}},
+        // {{-0.0f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}}
         {{100.0f, 100.0f, 0.0f}, {1.0f, 0.0f, 0.0f}},
         {{200.0f, 100.0f, 0.0f}, {0.0f, 1.0f, 0.0f}},
         {{200.0f, 200.0f, 0.0f}, {0.0f, 0.0f, 1.0f}},
@@ -109,10 +109,10 @@ void DrawModel::load3() {
                                                   VMA_ALLOCATION_CREATE_MAPPED_BIT
         );
 
-
-        ubo_buffers[i]->CopyData(sizeof(GlobalUbo), (void *) &globalUbo);
-        ubo_buffers[i]->Flush();
+        // ubo_buffers[i]->CopyData(sizeof(GlobalUbo), (void *) &globalUbo);
+        // ubo_buffers[i]->Flush();
     }
+    UpdateUniform(globalUbo);
 }
 
 void DrawModel::load() {

@@ -25,7 +25,15 @@ struct Init {
     std::unique_ptr<lvk::VulkanContext> context{};
     lvk::GlobalUbo ubo{};
 
-    bool is_resizing = false;
+    void UploadUbo(int width, int height) {
+        auto view = glm::lookAt(glm::vec3(0.0f, 0.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+
+        auto projection = glm::ortho(0.0f, static_cast<float>(width), 0.0f, static_cast<float>(height), -5.0f,
+                                     5.0f);
+
+        auto model = glm::mat4(1.0f);
+        ubo.mvp = projection * view * model;
+    }
 
     void Cleanup() const {
         context->Cleanup();
@@ -78,6 +86,8 @@ int device_initialization(Init &init) {
 
     //
     init.context = std::make_unique<lvk::VulkanContext>(init.window, instance, surface, device);
+    init.UploadUbo(800, 600);
+
 
     return 0;
 }
@@ -99,14 +109,7 @@ void cleanup(Init &init, lvk::RenderContext &context) {
 }
 
 void resize(GLFWwindow *window, int width, int height) {
-    auto view = glm::lookAt(glm::vec3(0.0f, 0.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-
-    auto projection = glm::ortho(0.0f, static_cast<float>(width), 0.0f, static_cast<float>(height), -5.0f,
-                                 5.0f);
-
-    auto model = glm::mat4(1.0f);
-    init.ubo.mvp = projection * view * model;
-    init.is_resizing = true;
+    init.UploadUbo(width, height);
 }
 
 
@@ -139,26 +142,27 @@ int main() {
     // auto draw = [&model](lvk::RenderContext &render) {
     // model.draw(render);
     // };
+    // model.UpdateUniform(init.ubo);
 
     while (!glfwWindowShouldClose(init.window)) {
         glfwPollEvents();
 
-        if (init.is_resizing) {
-            model.UpdateUniform(init.ubo);
-            render.RecreateSwapchain();
-            init.is_resizing = false;
-        }
+        // if (init.is_resizing) {
+            // render.RecreateSwapchain();
+            // init.is_resizing = false;
+        // }
         // render.rendering(draw);
 
         int f = render.RenderBegin();
-        if (f) {
-            continue;
-        }
+        // if (f) {
+            // continue;
+        // }
 
         render.RenderPassBegin();
         // create_command_buffers_v2(render);
         // create_command_buffers_v3(render, render.image_index);
 
+        model.UpdateUniform(init.ubo);
         model.draw(render);
         // model2.draw(render);
 
