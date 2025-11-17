@@ -111,15 +111,15 @@ int main() {
     lvk::RenderContext render(*init.context);
 
     lvk::DrawModel model(*init.context);
-    model.load();
+    // model.load3();
 
-    lvk::DrawModel model2(*init.context);
-    model2.load2();
+    // lvk::DrawModel model2(*init.context);
+    // model2.load2();
 
 
-    auto draw = [&model](lvk::RenderContext &render) {
-        model.draw(render);
-    };
+    // auto draw = [&model](lvk::RenderContext &render) {
+        // model.draw(render);
+    // };
 
     while (!glfwWindowShouldClose(init.window)) {
         glfwPollEvents();
@@ -131,7 +131,7 @@ int main() {
         // create_command_buffers_v2(render);
         // create_command_buffers_v3(render, render.image_index);
         model.draw(render);
-        model2.draw(render);
+        // model2.draw(render);
 
         render.RenderPassEnd();
         render.RenderEnd();

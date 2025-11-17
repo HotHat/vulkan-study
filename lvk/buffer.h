@@ -39,22 +39,28 @@ struct Buffer{
         vmaDestroyBuffer(allocator, buffer, allocation);
     }
 
-    void CopyData(uint32_t size, void *data) const {
+    void CopyData(uint32_t p_size, void *data) {
         void* mappedData;
         vmaMapMemory(allocator, allocation, &mappedData);
-        memcpy(mappedData, data, size);
+        memcpy(mappedData, data, p_size);
         vmaUnmapMemory(allocator, allocation);
+
+        size = p_size;
     }
 
     void Flush(VkDeviceSize offset, VkDeviceSize size) const {
         vmaFlushAllocation(allocator, allocation, offset, size);
     }
 
+    void Flush() const {
+        vmaFlushAllocation(allocator, allocation, 0, size);
+    }
+
     // ~Buffer() {
     //     VmaAllocation allocation = nullptr;
     //     vmaDestroyBuffer(allocator, buffer, allocation);
     // }
-
+    size_t size{};
     VmaAllocator &allocator;
     VkBuffer buffer;
     VmaAllocation allocation;

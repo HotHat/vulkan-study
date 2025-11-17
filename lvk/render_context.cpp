@@ -409,6 +409,10 @@ VkCommandBuffer RenderContext::GetCurrentCommandBuffer() const {
     return command_buffers[image_index];
 }
 
+uint32_t RenderContext::GetCurrentImageIndex() const {
+    return image_index;
+}
+
 VkFramebuffer RenderContext::GetCurrentFrameBuffer() const {
     return framebuffers[image_index];
 }

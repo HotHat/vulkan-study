@@ -18,13 +18,13 @@ struct VulkanContext {
     void CreateSwapchain();
     [[nodiscard]] VkRenderPass GetDefaultRenderPass() const;
 
-    Instance instance{};
-    VkSurfaceKHR surface{};
-    Device device{};
-    Swapchain swapchain{};
-    VkRenderPass render_pass{};
+    Instance instance;
+    VkSurfaceKHR surface;
+    Device device;
+    Swapchain swapchain;
+    VkRenderPass render_pass;
 
-    GLFWwindow *window{};
+    GLFWwindow *window;
 
     void Cleanup();
 

@@ -18,6 +18,7 @@ public:
     ~Allocator();
 
     std::unique_ptr<Buffer> CreateBuffer(VkDeviceSize size_, uint32_t usage_, VmaMemoryUsage memory_);
+    std::unique_ptr<Buffer> CreateBuffer2(VkDeviceSize size_, uint32_t usage_, VmaMemoryUsage memory_, uint32_t alloc_flag_);
 
 private:
     VmaAllocator allocator{};

@@ -34,6 +34,8 @@ set(PROJECT_FILES
         ${LVK_FILES}
         draw_model.cpp
         draw_model.h
+        descriptor.cpp
+        descriptor.h
 )
 
 #NB: switch this to shared library and things stop working. (there is likely two copies of volk somewhere.

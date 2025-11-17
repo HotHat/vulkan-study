@@ -11,11 +11,18 @@
 #include "allocator.h"
 #include "buffer.h"
 #include "render_context.h"
+#include "descriptor.h"
 
 namespace lvk {
+class DescriptorSetLayout;
+
 struct Vertex {
     glm::vec2 pos;
     glm::vec3 color;
+};
+
+struct GlobalUbo {
+    glm::mat4 mvp{1.f};
 };
 
 class DrawModel {
@@ -24,18 +31,21 @@ public:
 
     void load();
     void load2();
+    void load3();
 
     void destroy();
 
     void draw(RenderContext &context);
 
     void create_render_pass();
-    void create_graphics_pipeline();
+    void CreateGraphicsPipeline();
+    void CreateGraphicsPipeline2();
 
     VulkanContext &context;
     std::unique_ptr<Allocator> allocator;
-    std::unique_ptr<Buffer> vertice_buffer;
+    std::unique_ptr<Buffer> vertex_buffer;
     std::unique_ptr<Buffer> indices_buffer;
+    std::vector<std::unique_ptr<Buffer>> ubo_buffers;
 
     VkRenderPass render_pass {};
     VkPipeline pipeline {};
@@ -43,8 +53,15 @@ public:
     VkPipeline graphics_pipeline{};
 
 private:
+    void createDescriptorSet();
+
+    std::unique_ptr<DescriptorSetLayout> descriptorSetLayout;
+    std::unique_ptr<DescriptorPool> descriptorPool;
+    std::vector<VkDescriptorSet> descriptorSets;
+
     std::vector<Vertex> vertices{};
     std::vector<uint16_t> indices{};
+    GlobalUbo globalUbo{};
 };
 } // end namespace lvk
 

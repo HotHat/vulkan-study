@@ -26,6 +26,7 @@ public:
     void RenderPassBegin() const;
     void RenderPassEnd() const;
     [[nodiscard]] VkCommandBuffer GetCurrentCommandBuffer() const;
+    uint32_t GetCurrentImageIndex() const;
     [[nodiscard]] VkFramebuffer GetCurrentFrameBuffer() const;
     [[nodiscard]] VkExtent2D GetExtent() const;
     void Cleanup();
