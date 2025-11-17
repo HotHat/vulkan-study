@@ -469,6 +469,13 @@ void DrawModel::CreateGraphicsPipeline2() {
     vkDestroyShaderModule(context.device.device, vert_module, nullptr);
 }
 
+void DrawModel::UpdateUniform(GlobalUbo &ubo) {
+    for (int i = 0; i < ubo_buffers.size(); i++) {
+        ubo_buffers[i]->CopyData(sizeof(GlobalUbo), (void *) &ubo);
+        ubo_buffers[i]->Flush();
+    }
+}
+
 void DrawModel::createDescriptorSet() {
     descriptorPool =
             DescriptorPool::Builder(context.device)

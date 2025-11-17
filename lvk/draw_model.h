@@ -40,6 +40,7 @@ public:
     void create_render_pass();
     void CreateGraphicsPipeline();
     void CreateGraphicsPipeline2();
+    void UpdateUniform(GlobalUbo &ubo);
 
     VulkanContext &context;
     std::unique_ptr<Allocator> allocator;

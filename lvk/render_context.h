@@ -19,9 +19,10 @@ public:
         VulkanContext &context
     );
 
+    void RecreateSwapchain();
     void Rendering();
     void Rendering(const std::function<void(RenderContext &)> &);
-    void RenderBegin();
+    int RenderBegin();
     void RenderEnd();
     void RenderPassBegin() const;
     void RenderPassEnd() const;
@@ -32,7 +33,6 @@ public:
     void Cleanup();
 
 private:
-    void recreate_swapchain();
     void reset_swapchain(Swapchain swapchain_);
     // void reset_context(VulkanContext context_);
     // void create_swapchain();

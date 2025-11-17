@@ -13,6 +13,9 @@
 // #include <buffer.h>
 
 #include <glm/glm.hpp>
+#include <glm/ext/matrix_clip_space.hpp>
+#include <glm/ext/matrix_transform.hpp>
+
 #include "allocator.h"
 #include "draw_model.h"
 
@@ -20,6 +23,9 @@
 struct Init {
     GLFWwindow *window;
     std::unique_ptr<lvk::VulkanContext> context{};
+    lvk::GlobalUbo ubo{};
+
+    bool is_resizing = false;
 
     void Cleanup() const {
         context->Cleanup();
@@ -27,6 +33,8 @@ struct Init {
         glfwTerminate();
     }
 };
+
+Init init;
 
 int device_initialization(Init &init) {
     init.window = glfwCreateWindow(800, 600, "Hello World!", nullptr, nullptr);
@@ -90,14 +98,25 @@ void cleanup(Init &init, lvk::RenderContext &context) {
     init.Cleanup();
 }
 
+void resize(GLFWwindow *window, int width, int height) {
+    auto view = glm::lookAt(glm::vec3(0.0f, 0.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+
+    auto projection = glm::ortho(0.0f, static_cast<float>(width), 0.0f, static_cast<float>(height), -5.0f,
+                                 5.0f);
+
+    auto model = glm::mat4(1.0f);
+    init.ubo.mvp = projection * view * model;
+    init.is_resizing = true;
+}
+
+
 int main() {
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
 
-    Init init;
-
     device_initialization(init);
+    glfwSetWindowSizeCallback(init.window, resize);
 
     // init.context.CreateSwapchain();
 
@@ -118,18 +137,28 @@ int main() {
 
 
     // auto draw = [&model](lvk::RenderContext &render) {
-        // model.draw(render);
+    // model.draw(render);
     // };
 
     while (!glfwWindowShouldClose(init.window)) {
         glfwPollEvents();
 
+        if (init.is_resizing) {
+            model.UpdateUniform(init.ubo);
+            render.RecreateSwapchain();
+            init.is_resizing = false;
+        }
         // render.rendering(draw);
 
-        render.RenderBegin();
+        int f = render.RenderBegin();
+        if (f) {
+            continue;
+        }
+
         render.RenderPassBegin();
         // create_command_buffers_v2(render);
         // create_command_buffers_v3(render, render.image_index);
+
         model.draw(render);
         // model2.draw(render);
 

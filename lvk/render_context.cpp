@@ -144,7 +144,7 @@ void RenderContext::Rendering() {
                                             available_semaphores[current_frame], VK_NULL_HANDLE, &image_index);
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-        recreate_swapchain();
+        RecreateSwapchain();
     } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
         throw std::runtime_error("failed to acquire swapchain image. Error " + std::to_string(result));
     }
@@ -192,7 +192,7 @@ void RenderContext::Rendering() {
 
     result = vkQueuePresentKHR(present_queue, &present_info);
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
-        recreate_swapchain();
+        RecreateSwapchain();
     } else if (result != VK_SUCCESS) {
         throw std::runtime_error("failed to present swapchain image\n");
     }
@@ -209,7 +209,7 @@ void RenderContext::Rendering(const std::function<void(RenderContext &)>& draw_r
                                             available_semaphores[current_frame], VK_NULL_HANDLE, &image_index);
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-        recreate_swapchain();
+        RecreateSwapchain();
         return;
     }
     if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
@@ -267,7 +267,7 @@ void RenderContext::Rendering(const std::function<void(RenderContext &)>& draw_r
 
     result = vkQueuePresentKHR(present_queue, &present_info);
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
-        recreate_swapchain();
+        RecreateSwapchain();
         return;
     }
     if (result != VK_SUCCESS) {
@@ -277,7 +277,7 @@ void RenderContext::Rendering(const std::function<void(RenderContext &)>& draw_r
     current_frame = (current_frame + 1) % max_frames_in_flight;
 }
 
-void RenderContext::RenderBegin() {
+int RenderContext::RenderBegin() {
 
     vkWaitForFences(context.device.device, 1, &in_flight_fences[current_frame], VK_TRUE, UINT64_MAX);
 
@@ -286,8 +286,8 @@ void RenderContext::RenderBegin() {
                                             available_semaphores[current_frame], VK_NULL_HANDLE, &image_index);
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-        recreate_swapchain();
-        return;
+        RecreateSwapchain();
+        return 1;
     }
     if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
         throw std::runtime_error("failed to acquire swapchain image. Error " + std::to_string(result));
@@ -305,6 +305,7 @@ void RenderContext::RenderBegin() {
     if (image_in_flight[image_index] != VK_NULL_HANDLE) {
         vkWaitForFences(context.device.device, 1, &image_in_flight[image_index], VK_TRUE, UINT64_MAX);
     }
+    return 0;
 }
 
 void RenderContext::RenderEnd() {
@@ -354,7 +355,7 @@ void RenderContext::RenderEnd() {
 
     result = vkQueuePresentKHR(present_queue, &present_info);
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
-        recreate_swapchain();
+        RecreateSwapchain();
     } else if (result != VK_SUCCESS) {
         throw std::runtime_error("failed to present swapchain image\n");
     }
@@ -422,7 +423,7 @@ VkExtent2D RenderContext::GetExtent() const {
 }
 
 
-void RenderContext::recreate_swapchain() {
+void RenderContext::RecreateSwapchain() {
     int width = 0, height = 0;
     glfwGetFramebufferSize(context.window, &width, &height);
     while (width == 0 || height == 0) {
