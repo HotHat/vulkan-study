@@ -5,6 +5,8 @@
 #include "draw_model.h"
 
 #include <array>
+#include <iostream>
+#include <ostream>
 #include <vector>
 #include "allocator.h"
 #include "functions.h"
@@ -23,10 +25,10 @@ DrawModel::DrawModel(VulkanContext &context) : context(context) {
 
 void DrawModel::load2() {
     vertices = {
-        {{-0.0f, -0.0f}, {1.0f, 0.0f, 0.0f}},
-        {{0.5f, -0.0f}, {0.0f, 1.0f, 0.0f}},
-        {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
-        {{-0.0f, 0.5f}, {1.0f, 1.0f, 1.0f}}
+        {{-0.0f, -0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}},
+        {{0.5f, -0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}},
+        {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}},
+        {{-0.0f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}}
     };
 
     indices = {0, 1, 2, 2, 3, 0};
@@ -51,10 +53,14 @@ void DrawModel::load2() {
 
 void DrawModel::load3() {
     vertices = {
-        {{-0.0f, -0.0f}, {1.0f, 0.0f, 0.0f}},
-        {{0.5f, -0.0f}, {0.0f, 1.0f, 0.0f}},
-        {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
-        {{-0.0f, 0.5f}, {1.0f, 1.0f, 1.0f}}
+        // {{-0.0f, -0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}},
+               // {{0.5f, -0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}},
+               // {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}},
+               // {{-0.0f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}}
+        {{100.0f, 100.0f, 0.0f}, {1.0f, 0.0f, 0.0f}},
+        {{200.0f, 100.0f, 0.0f}, {0.0f, 1.0f, 0.0f}},
+        {{200.0f, 200.0f, 0.0f}, {0.0f, 0.0f, 1.0f}},
+        {{100.0f, 200.0f, 0.0f}, {1.0f, 1.0f, 1.0f}}
     };
 
     indices = {0, 1, 2, 2, 3, 0};
@@ -78,7 +84,22 @@ void DrawModel::load3() {
 
     ubo_buffers.resize(Swapchain::MAX_FRAMES_IN_FLIGHT);
 
-    globalUbo.mvp = glm::translate(globalUbo.mvp, glm::vec3(0.0f, 0.5f, 0.0f));
+    auto extent = context.swapchain.extent;
+    auto view = glm::lookAt(glm::vec3(0.0f, 0.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+
+    auto projection = glm::ortho(0.0f, static_cast<float>(extent.width), 0.0f, static_cast<float>(extent.height), -5.0f,
+                                 5.0f);
+
+    auto model = glm::mat4(1.0f);
+    globalUbo.mvp = projection * view * model;
+    // globalUbo.mvp[1][1] *= -1;
+
+    // globalUbo.mvp = glm::mat4(1.0f);
+
+    for (int i = 0; i < vertices.size(); i++) {
+        auto tp = globalUbo.mvp * glm::vec4(vertices[i].pos, 1.0f);
+        std::cout << tp[0] << " " << tp[1] << " " << tp[2] << " " << tp[3] << std::endl;
+    }
 
     for (int i = 0; i < ubo_buffers.size(); i++) {
         ubo_buffers[i] = allocator->CreateBuffer2(sizeof(GlobalUbo),
@@ -96,10 +117,10 @@ void DrawModel::load3() {
 
 void DrawModel::load() {
     vertices = {
-        {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-        {{0.0f, -0.5f}, {0.0f, 1.0f, 0.0f}},
-        {{0.0f, 0.0f}, {0.0f, 0.0f, 1.0f}},
-        {{-0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}}
+        {{-0.0f, -0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}},
+        {{0.5f, -0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}},
+        {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}},
+        {{-0.0f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}}
     };
 
     indices = {0, 1, 2, 2, 3, 0};
@@ -334,7 +355,7 @@ void DrawModel::CreateGraphicsPipeline2() {
     std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions{};
     attributeDescriptions[0].binding = 0;
     attributeDescriptions[0].location = 0;
-    attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+    attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
     attributeDescriptions[0].offset = offsetof(Vertex, pos);
     attributeDescriptions[1].binding = 0;
     attributeDescriptions[1].location = 1;
