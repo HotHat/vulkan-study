@@ -20,12 +20,14 @@ public:
     );
 
     void RecreateSwapchain();
+    void ReSize(uint32_t width, uint32_t height);
     void Rendering();
     void Rendering(const std::function<void(RenderContext &)> &);
     int RenderBegin();
     void RenderEnd();
     void RenderPassBegin() const;
     void RenderPassEnd() const;
+    void SetDebug(bool);
     [[nodiscard]] VkCommandBuffer GetCurrentCommandBuffer() const;
     uint32_t GetCurrentImageIndex() const;
     [[nodiscard]] VkFramebuffer GetCurrentFrameBuffer() const;
@@ -68,7 +70,7 @@ private:
     uint8_t max_frames_in_flight = 3;
 
     VulkanContext &context;
-
+    bool debug_mode = false;
     // Swapchain swapchain;
     // Device device;
 };

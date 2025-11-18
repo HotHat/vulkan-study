@@ -14,7 +14,6 @@ namespace lvk {
 // RenderContext::RenderContext(VulkanContext &context_): context(context_) {}
 
 RenderContext::RenderContext(VulkanContext &context) : context(context) {
-
     render_pass = context.GetDefaultRenderPass();
     max_frames_in_flight = 3;
 
@@ -202,7 +201,7 @@ void RenderContext::Rendering() {
     current_frame = (current_frame + 1) % max_frames_in_flight;
 }
 
-void RenderContext::Rendering(const std::function<void(RenderContext &)>& draw_record) {
+void RenderContext::Rendering(const std::function<void(RenderContext &)> &draw_record) {
     vkWaitForFences(context.device.device, 1, &in_flight_fences[image_index], VK_TRUE, UINT64_MAX);
 
     // uint32_t image_index = 0;
@@ -217,7 +216,6 @@ void RenderContext::Rendering(const std::function<void(RenderContext &)>& draw_r
     if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
         throw std::runtime_error("failed to acquire swapchain image. Error " + std::to_string(result));
     }
-
 
 
     if (image_in_flight[image_index] != VK_NULL_HANDLE) {
@@ -280,7 +278,6 @@ void RenderContext::Rendering(const std::function<void(RenderContext &)>& draw_r
 }
 
 int RenderContext::RenderBegin() {
-
     vkWaitForFences(context.device.device, 1, &in_flight_fences[current_frame], VK_TRUE, UINT64_MAX);
 
     VkResult result = vkAcquireNextImageKHR(context.device.device,
@@ -357,7 +354,8 @@ void RenderContext::RenderEnd() {
 
     result = vkQueuePresentKHR(present_queue, &present_info);
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
-        std::cout << "[RenderContext] recreate swapchain width:" << context.swapchain.extent.width << " height:" << context.swapchain.extent.height << std::endl;
+        std::cout << "[RenderContext] recreate swapchain width:" << context.swapchain.extent.width << " height:" <<
+                context.swapchain.extent.height << std::endl;
         RecreateSwapchain();
     } else if (result != VK_SUCCESS) {
         throw std::runtime_error("failed to present swapchain image\n");
@@ -367,13 +365,14 @@ void RenderContext::RenderEnd() {
 }
 
 void RenderContext::RenderPassBegin() const {
-
     auto framebuffer = GetCurrentFrameBuffer();
     // auto commandBuffer = context.command_buffers[current_frame_];
     auto commandBuffer = GetCurrentCommandBuffer();
     auto extent = GetExtent();
 
-
+    if (debug_mode) {
+        std::cout << "[RenderContext] render pass  width:" << extent.width << " height:" << extent.height << std::endl;
+    }
 
     VkRenderPassBeginInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -409,6 +408,10 @@ void RenderContext::RenderPassEnd() const {
     vkCmdEndRenderPass(commandBuffer);
 }
 
+void RenderContext::SetDebug(bool is_debug) {
+    debug_mode = is_debug;
+}
+
 VkCommandBuffer RenderContext::GetCurrentCommandBuffer() const {
     return command_buffers[image_index];
 }
@@ -427,16 +430,9 @@ VkExtent2D RenderContext::GetExtent() const {
 
 
 void RenderContext::RecreateSwapchain() {
-    int width = 0, height = 0;
-    glfwGetFramebufferSize(context.window, &width, &height);
-    while (width == 0 || height == 0) {
-        glfwGetFramebufferSize(context.window, &width, &height);
-        glfwWaitEvents();
-    }
-
     vkDeviceWaitIdle(context.device.device);
 
-    // vkDestroyCommandPool(context.device.device, command_pool, nullptr);
+    vkDestroyCommandPool(context.device.device, command_pool, nullptr);
 
     for (auto framebuffer: framebuffers) {
         vkDestroyFramebuffer(context.device.device, framebuffer, nullptr);
@@ -449,12 +445,23 @@ void RenderContext::RecreateSwapchain() {
     // create_swapchain();
     context.CreateSwapchain();
     create_framebuffers();
-    // create_command_pool();
-    // create_command_buffers();
+    create_command_pool();
+    create_command_buffers();
 
     // if (0 != create_framebuffers(init, data)) return -1;
     // if (0 != create_command_pool(init, data)) return -1;
     // if (0 != create_command_buffers(init, data)) return -1;
+}
+
+void RenderContext::ReSize(uint32_t width, uint32_t height) {
+    auto extent = GetExtent();
+    if (extent.width == width && extent.height == height) {
+        return;
+    }
+
+    RecreateSwapchain();
+    //
+    vkDeviceWaitIdle(context.device.device);
 }
 
 VkCommandBuffer RenderContext::BeginSingleTimeCommands() {
@@ -489,5 +496,4 @@ void RenderContext::EndSingleTimeCommands(VkCommandBuffer commandBuffer) {
 
     vkFreeCommandBuffers(context.device.device, command_pool, 1, &commandBuffer);
 }
-
 } // end namespace lvk

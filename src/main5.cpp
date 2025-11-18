@@ -38,6 +38,25 @@ struct Init {
         auto model = glm::mat4(1.0f);
         ubo.mvp = projection * view * model;
     }
+    void ReSize(uint32_t width, uint32_t height) {
+        render->ReSize(width, height);
+        Render();
+    }
+
+    void Render() {
+        render->RenderBegin();
+
+        render->RenderPassBegin();
+        // create_command_buffers_v2(render);
+        // create_command_buffers_v3(render, render.image_index);
+        model->UpdateUniform(ubo);
+        model->draw(*render);
+        // model2.draw(render);
+
+        render->RenderPassEnd();
+        render->RenderEnd();
+        render->SetDebug(false);
+    }
 
     void Cleanup() const {
         model->destroy();
@@ -115,12 +134,27 @@ void resize(GLFWwindow *window, int width, int height) {
 
 void frame_resize(GLFWwindow *window, int width, int height) {
     init.framebufferResized = true;
-    init.render->RecreateSwapchain();
+    init.render->ReSize(width, height);
     init.UploadUbo(width, height);
     std::cout << "framebuffer resize ====> width: " << width << " height: " << height << std::endl;
+    // init.render->SetDebug(true);
+    // glfwGetFramebufferSize(window, &width, &height);
+    // std::cout << "framebuffer resize2 ===> width: " << width << " height: " << height << std::endl;
+    // init.render->RenderBegin();
 
-    glfwGetFramebufferSize(window, &width, &height);
-    std::cout << "framebuffer resize2 ===> width: " << width << " height: " << height << std::endl;
+    // init.render->RenderPassBegin();
+    // create_command_buffers_v2(render);
+    // create_command_buffers_v3(render, render.image_index);
+
+    // init.model->UpdateUniform(init.ubo);
+    // init.model->draw(*init.render);
+    // model2.draw(render);
+
+    // init.render->RenderPassEnd();
+    // init.render->RenderEnd();
+
+    //
+    init.ReSize(width, height);
 }
 
 int main() {
@@ -169,33 +203,14 @@ int main() {
         // init.model->UpdateUniform(init.ubo);
         // continue;
         // }
-        if (init.framebufferResized) {
-            init.framebufferResized = false;
-            continue;
-        }
-
-        init.model->UpdateUniform(init.ubo);
+        // init.model->UpdateUniform(init.ubo);
         // render.rendering(draw);
 
         // auto command_buffer = render.BeginSingleTimeCommands();
         // model.UpdateUniform2(command_buffer, init.ubo);
         // render.EndSingleTimeCommands(command_buffer);
 
-        int f = init.render->RenderBegin();
-        if (f) {
-            continue;
-        }
-
-
-        init.render->RenderPassBegin();
-        // create_command_buffers_v2(render);
-        // create_command_buffers_v3(render, render.image_index);
-
-        init.model->draw(*init.render);
-        // model2.draw(render);
-
-        init.render->RenderPassEnd();
-        init.render->RenderEnd();
+        init.Render();
     }
 
 
