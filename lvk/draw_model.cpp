@@ -18,7 +18,24 @@ DrawModel::DrawModel(VulkanContext &context) : context(context) {
     render_pass = context.GetDefaultRenderPass();
     allocator = std::make_unique<Allocator>(context);
 
-    load3();
+    vertex_buffer = allocator->CreateBuffer(65535,
+                                            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                                            VMA_MEMORY_USAGE_CPU_TO_GPU);
+    indices_buffer = allocator->CreateBuffer(65535,
+                                             VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                                             VMA_MEMORY_USAGE_CPU_TO_GPU);
+
+    ubo_buffers.resize(Swapchain::MAX_FRAMES_IN_FLIGHT);
+
+    for (auto & ubo_buffer : ubo_buffers) {
+        ubo_buffer = allocator->CreateBuffer2(sizeof(GlobalUbo),
+                                                  VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                                                  VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
+                                                  VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT |
+                                                  VMA_ALLOCATION_CREATE_MAPPED_BIT
+        );
+    }
+    // load3();
     createDescriptorSet();
     CreateGraphicsPipeline2();
 }
@@ -52,28 +69,22 @@ void DrawModel::load2() {
 }
 
 void DrawModel::load3() {
-    vertices = {
-        // {{-0.0f, -0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}},
-        // {{0.5f, -0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}},
-        // {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}},
-        // {{-0.0f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}}
-        {{100.0f, 100.0f, 0.0f}, {1.0f, 0.0f, 0.0f}},
-        {{200.0f, 100.0f, 0.0f}, {0.0f, 1.0f, 0.0f}},
-        {{200.0f, 200.0f, 0.0f}, {0.0f, 0.0f, 1.0f}},
-        {{100.0f, 200.0f, 0.0f}, {1.0f, 1.0f, 1.0f}}
-    };
-
-    indices = {0, 1, 2, 2, 3, 0};
+    // vertices = {
+    //     // {{-0.0f, -0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}},
+    //     // {{0.5f, -0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}},
+    //     // {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}},
+    //     // {{-0.0f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}}
+    //     {{100.0f, 100.0f, 0.0f}, {1.0f, 0.0f, 0.0f}},
+    //     {{200.0f, 100.0f, 0.0f}, {0.0f, 1.0f, 0.0f}},
+    //     {{200.0f, 200.0f, 0.0f}, {0.0f, 0.0f, 1.0f}},
+    //     {{100.0f, 200.0f, 0.0f}, {1.0f, 1.0f, 1.0f}}
+    // };
+    //
+    // indices = {0, 1, 2, 2, 3, 0};
+    assert(!indices.empty() && "indices is empty");
 
     uint32_t vertice_size = sizeof(vertices[0]) * vertices.size();
     uint32_t indices_size = sizeof(indices[0]) * indices.size();
-
-    vertex_buffer = allocator->CreateBuffer(vertice_size,
-                                            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-                                            VMA_MEMORY_USAGE_CPU_TO_GPU);
-    indices_buffer = allocator->CreateBuffer(indices_size,
-                                             VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-                                             VMA_MEMORY_USAGE_CPU_TO_GPU);
 
 
     vertex_buffer->CopyData(vertice_size, (void *) vertices.data());
@@ -82,37 +93,22 @@ void DrawModel::load3() {
     indices_buffer->CopyData(indices_size, (void *) indices.data());
     indices_buffer->Flush(0, indices_size);
 
-    ubo_buffers.resize(Swapchain::MAX_FRAMES_IN_FLIGHT);
 
-    auto extent = context.swapchain.extent;
-    auto view = glm::lookAt(glm::vec3(0.0f, 0.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    // auto extent = context.swapchain.extent;
+    // auto view = glm::lookAt(glm::vec3(0.0f, 0.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
-    auto projection = glm::ortho(0.0f, static_cast<float>(extent.width), 0.0f, static_cast<float>(extent.height), -5.0f,
-                                 5.0f);
+    // auto projection = glm::ortho(0.0f, static_cast<float>(extent.width), 0.0f, static_cast<float>(extent.height), -5.0f,
+                                 // 5.0f);
 
-    auto model = glm::mat4(1.0f);
-    globalUbo.mvp = projection * view * model;
-    // globalUbo.mvp[1][1] *= -1;
 
-    // globalUbo.mvp = glm::mat4(1.0f);
 
-    for (int i = 0; i < vertices.size(); i++) {
-        auto tp = globalUbo.mvp * glm::vec4(vertices[i].pos, 1.0f);
-        std::cout << tp[0] << " " << tp[1] << " " << tp[2] << " " << tp[3] << std::endl;
-    }
+    // for (int i = 0; i < ubo_buffers.size(); i++) {
 
-    for (int i = 0; i < ubo_buffers.size(); i++) {
-        ubo_buffers[i] = allocator->CreateBuffer2(sizeof(GlobalUbo),
-                                                  VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-                                                  VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
-                                                  VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT |
-                                                  VMA_ALLOCATION_CREATE_MAPPED_BIT
-        );
 
         // ubo_buffers[i]->CopyData(sizeof(GlobalUbo), (void *) &globalUbo);
         // ubo_buffers[i]->Flush();
-    }
-    UpdateUniform(globalUbo);
+    // }
+    // UpdateUniform(globalUbo);
 }
 
 void DrawModel::load() {
@@ -158,6 +154,21 @@ void DrawModel::destroy() {
 
     vkDestroyPipeline(context.device.device, graphics_pipeline, nullptr);
     vkDestroyPipelineLayout(context.device.device, pipeline_layout, nullptr);
+}
+
+void DrawModel::DrawRectangle(glm::vec2 pos, glm::vec2 size, glm::vec3 color) {
+    uint32_t vertice_size = vertices.size();
+    vertices.emplace_back(Vertex(glm::vec3(pos.x, pos.y, 0.0f), color));
+    vertices.emplace_back(Vertex(glm::vec3(pos.x + size.x, pos.y, 0.0f), color));
+    vertices.emplace_back(Vertex(glm::vec3(pos.x + size.x, pos.y + size.y, 0.0f), color));
+    vertices.emplace_back(Vertex(glm::vec3(pos.x, pos.y + size.y, 0.0f), color));
+
+    indices.emplace_back(vertice_size);
+    indices.emplace_back(vertice_size + 1);
+    indices.emplace_back(vertice_size + 2);
+    indices.emplace_back(vertice_size + 2);
+    indices.emplace_back(vertice_size + 3);
+    indices.emplace_back(vertice_size);
 }
 
 void DrawModel::draw(RenderContext &context) {
@@ -476,6 +487,28 @@ void DrawModel::UpdateUniform(GlobalUbo &ubo) {
     }
 }
 
+void DrawModel::UpdateUniform2(VkCommandBuffer command_buffer, GlobalUbo &ubo) {
+    for (int i = 0; i < ubo_buffers.size(); i++) {
+        ubo_buffers[i]->CopyData(sizeof(GlobalUbo), (void *) &ubo);
+        ubo_buffers[i]->Flush();
+
+         VkBufferMemoryBarrier bufMemBarrier = { VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER };
+    bufMemBarrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
+    bufMemBarrier.dstAccessMask = VK_ACCESS_UNIFORM_READ_BIT;
+    bufMemBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    bufMemBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    bufMemBarrier.buffer = ubo_buffers[i]->buffer;
+    bufMemBarrier.offset = 0;
+    bufMemBarrier.size = VK_WHOLE_SIZE;
+
+    // It's important to insert a buffer memory barrier here to ensure writing to the buffer has finished.
+    vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
+        0, 0, nullptr, 1, &bufMemBarrier, 0, nullptr);
+    }
+
+}
+
+
 void DrawModel::createDescriptorSet() {
     descriptorPool =
             DescriptorPool::Builder(context.device)
@@ -497,9 +530,9 @@ void DrawModel::createDescriptorSet() {
         auto bufferInfo = VkDescriptorBufferInfo{
             ubo_buffers[i]->buffer,
             0,
-            // VK_WHOLE_SIZE
+            VK_WHOLE_SIZE
             // ubo_buffers[i]->size,
-            range
+            // range
         };
 
         DescriptorWriter(*descriptorSetLayout, *descriptorPool)

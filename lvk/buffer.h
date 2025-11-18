@@ -53,7 +53,7 @@ struct Buffer{
     }
 
     void Flush() const {
-        vmaFlushAllocation(allocator, allocation, 0, size);
+        vmaFlushAllocation(allocator, allocation, 0, VK_WHOLE_SIZE);
     }
 
     // ~Buffer() {

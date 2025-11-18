@@ -32,6 +32,9 @@ public:
     [[nodiscard]] VkExtent2D GetExtent() const;
     void Cleanup();
 
+    VkCommandBuffer BeginSingleTimeCommands();
+    void EndSingleTimeCommands(VkCommandBuffer commandBuffer);
+
 private:
     void reset_swapchain(Swapchain swapchain_);
     // void reset_context(VulkanContext context_);

@@ -5,6 +5,8 @@
 #include "render_context.h"
 
 #include <functional>
+#include <iostream>
+#include <ostream>
 #include <stdexcept>
 #include <utility>
 
@@ -355,6 +357,7 @@ void RenderContext::RenderEnd() {
 
     result = vkQueuePresentKHR(present_queue, &present_info);
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+        std::cout << "[RenderContext] recreate swapchain width:" << context.swapchain.extent.width << " height:" << context.swapchain.extent.height << std::endl;
         RecreateSwapchain();
     } else if (result != VK_SUCCESS) {
         throw std::runtime_error("failed to present swapchain image\n");
@@ -433,7 +436,7 @@ void RenderContext::RecreateSwapchain() {
 
     vkDeviceWaitIdle(context.device.device);
 
-    vkDestroyCommandPool(context.device.device, command_pool, nullptr);
+    // vkDestroyCommandPool(context.device.device, command_pool, nullptr);
 
     for (auto framebuffer: framebuffers) {
         vkDestroyFramebuffer(context.device.device, framebuffer, nullptr);
@@ -446,11 +449,45 @@ void RenderContext::RecreateSwapchain() {
     // create_swapchain();
     context.CreateSwapchain();
     create_framebuffers();
-    create_command_pool();
-    create_command_buffers();
+    // create_command_pool();
+    // create_command_buffers();
 
     // if (0 != create_framebuffers(init, data)) return -1;
     // if (0 != create_command_pool(init, data)) return -1;
     // if (0 != create_command_buffers(init, data)) return -1;
 }
+
+VkCommandBuffer RenderContext::BeginSingleTimeCommands() {
+    VkCommandBufferAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandPool = command_pool;
+    allocInfo.commandBufferCount = 1;
+
+    VkCommandBuffer commandBuffer;
+    vkAllocateCommandBuffers(context.device.device, &allocInfo, &commandBuffer);
+
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+    vkBeginCommandBuffer(commandBuffer, &beginInfo);
+
+    return commandBuffer;
+}
+
+void RenderContext::EndSingleTimeCommands(VkCommandBuffer commandBuffer) {
+    vkEndCommandBuffer(commandBuffer);
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &commandBuffer;
+
+    vkQueueSubmit(graphics_queue, 1, &submitInfo, VK_NULL_HANDLE);
+    vkQueueWaitIdle(graphics_queue);
+
+    vkFreeCommandBuffers(context.device.device, command_pool, 1, &commandBuffer);
+}
+
 } // end namespace lvk

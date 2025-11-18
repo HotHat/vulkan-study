@@ -4,6 +4,7 @@
 
 #include "vulkan_context.h"
 
+#include <iostream>
 #include <utility>
 
 namespace lvk {
@@ -20,6 +21,8 @@ void VulkanContext::CreateSwapchain() {
     destroy_swapchain(swapchain);
 
     swapchain = swapchain_;
+
+    std::cout << "[VulkanContext] swapchain created width:" << swapchain.extent.width << " height:" << swapchain.extent.height << std::endl;
 }
 
 void VulkanContext::createDefaultRenderPass() {

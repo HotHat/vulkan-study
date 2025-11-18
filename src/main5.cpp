@@ -24,6 +24,10 @@ struct Init {
     GLFWwindow *window;
     std::unique_ptr<lvk::VulkanContext> context{};
     lvk::GlobalUbo ubo{};
+    bool is_resizing = false;
+    bool framebufferResized = false;
+    std::unique_ptr<lvk::DrawModel> model;
+    std::unique_ptr<lvk::RenderContext> render;
 
     void UploadUbo(int width, int height) {
         auto view = glm::lookAt(glm::vec3(0.0f, 0.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
@@ -36,6 +40,8 @@ struct Init {
     }
 
     void Cleanup() const {
+        model->destroy();
+        render->Cleanup();
         context->Cleanup();
         glfwDestroyWindow(window);
         glfwTerminate();
@@ -88,30 +94,34 @@ int device_initialization(Init &init) {
     init.context = std::make_unique<lvk::VulkanContext>(init.window, instance, surface, device);
     init.UploadUbo(800, 600);
 
+    //
+    init.render = std::make_unique<lvk::RenderContext>(*init.context);
+    init.model = std::make_unique<lvk::DrawModel>(*init.context);
+    init.model->DrawRectangle({100.0f, 100.0f}, {100.0f, 100.0f}, {1.0f, 1.0f, 0.0f});
+    init.model->DrawRectangle({250.0f, 100.0f}, {100.0f, 100.0f}, {0.0f, 1.0f, 1.0f});
+    init.model->DrawRectangle({400.0f, 100.0f}, {100.0f, 100.0f}, {1.0f, 0.0f, 0.0f});
+    init.model->load3();
 
     return 0;
-}
-
-int create_swapchain(lvk::VulkanContext &context) {
-    lvk::SwapchainBuilder swapchain_builder{context.device};
-    auto swapchain = swapchain_builder.SetOldSwapchain(context.swapchain).Build();
-
-    lvk::destroy_swapchain(context.swapchain);
-
-    context.swapchain = swapchain;
-    return 0;
-}
-
-
-void cleanup(Init &init, lvk::RenderContext &context) {
-    context.Cleanup();
-    init.Cleanup();
 }
 
 void resize(GLFWwindow *window, int width, int height) {
     init.UploadUbo(width, height);
+    std::cout << "window resize =========> width: " << width << " height: " << height << std::endl;
+    init.is_resizing = true;
+    init.framebufferResized = true;
+    // init.model->UpdateUniform(init.ubo);
 }
 
+void frame_resize(GLFWwindow *window, int width, int height) {
+    init.framebufferResized = true;
+    init.render->RecreateSwapchain();
+    init.UploadUbo(width, height);
+    std::cout << "framebuffer resize ====> width: " << width << " height: " << height << std::endl;
+
+    glfwGetFramebufferSize(window, &width, &height);
+    std::cout << "framebuffer resize2 ===> width: " << width << " height: " << height << std::endl;
+}
 
 int main() {
     glfwInit();
@@ -119,7 +129,8 @@ int main() {
 
 
     device_initialization(init);
-    glfwSetWindowSizeCallback(init.window, resize);
+    // glfwSetWindowSizeCallback(init.window, resize);
+    glfwSetFramebufferSizeCallback(init.window, frame_resize);
 
     // init.context.CreateSwapchain();
 
@@ -130,9 +141,9 @@ int main() {
 
     // VkRenderPass render_pass = init.context->GetDefaultRenderPass();
 
-    lvk::RenderContext render(*init.context);
+    // lvk::RenderContext render(*init.context);
 
-    lvk::DrawModel model(*init.context);
+    // lvk::DrawModel model(*init.context);
     // model.load3();
 
     // lvk::DrawModel model2(*init.context);
@@ -147,35 +158,51 @@ int main() {
     while (!glfwWindowShouldClose(init.window)) {
         glfwPollEvents();
 
-        // if (init.is_resizing) {
-            // render.RecreateSwapchain();
-            // init.is_resizing = false;
+        // if (!init.is_resizing) {
+        // std::cout << "after resizing!" << std::endl;
         // }
+
+        // if (init.is_resizing) {
+        // render.RecreateSwapchain();
+        // init.is_resizing = false;
+        // std::cout << "resizing updated!" << std::endl;
+        // init.model->UpdateUniform(init.ubo);
+        // continue;
+        // }
+        if (init.framebufferResized) {
+            init.framebufferResized = false;
+            continue;
+        }
+
+        init.model->UpdateUniform(init.ubo);
         // render.rendering(draw);
 
-        int f = render.RenderBegin();
-        // if (f) {
-            // continue;
-        // }
+        // auto command_buffer = render.BeginSingleTimeCommands();
+        // model.UpdateUniform2(command_buffer, init.ubo);
+        // render.EndSingleTimeCommands(command_buffer);
 
-        render.RenderPassBegin();
+        int f = init.render->RenderBegin();
+        if (f) {
+            continue;
+        }
+
+
+        init.render->RenderPassBegin();
         // create_command_buffers_v2(render);
         // create_command_buffers_v3(render, render.image_index);
 
-        model.UpdateUniform(init.ubo);
-        model.draw(render);
+        init.model->draw(*init.render);
         // model2.draw(render);
 
-        render.RenderPassEnd();
-        render.RenderEnd();
+        init.render->RenderPassEnd();
+        init.render->RenderEnd();
     }
 
 
     vkDeviceWaitIdle(init.context->device.device);
 
-    model.destroy();
-
-    cleanup(init, render);
+    init.Cleanup();
+    // cleanup(init);
 
     return EXIT_SUCCESS;
 }

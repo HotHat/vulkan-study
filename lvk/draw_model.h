@@ -35,12 +35,14 @@ public:
 
     void destroy();
 
+    void DrawRectangle(glm::vec2 pos, glm::vec2 size, glm::vec3 color);
     void draw(RenderContext &context);
 
     void create_render_pass();
     void CreateGraphicsPipeline();
     void CreateGraphicsPipeline2();
     void UpdateUniform(GlobalUbo &ubo);
+    void UpdateUniform2(VkCommandBuffer command_buffer, GlobalUbo &ubo);
 
     VulkanContext &context;
     std::unique_ptr<Allocator> allocator;
