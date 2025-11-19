@@ -6,8 +6,6 @@
 #include "allocator.h"
 
 namespace lvk {
-
-
 Allocator::Allocator(VulkanContext &context_) {
     VmaVulkanFunctions vulkanFunctions = {};
     vulkanFunctions.vkGetInstanceProcAddr = &vkGetInstanceProcAddr;
@@ -29,7 +27,7 @@ Allocator::~Allocator() {
 }
 
 std::unique_ptr<Buffer> Allocator::CreateBuffer(VkDeviceSize size_, uint32_t usage_, VmaMemoryUsage memory_) {
-    VkBufferCreateInfo bufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+    VkBufferCreateInfo bufferInfo = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
     bufferInfo.size = size_;
     bufferInfo.usage = usage_;
 
@@ -44,14 +42,15 @@ std::unique_ptr<Buffer> Allocator::CreateBuffer(VkDeviceSize size_, uint32_t usa
     return std::make_unique<Buffer>(allocator, buffer, allocation);
 }
 
-std::unique_ptr<Buffer> Allocator::CreateBuffer2(VkDeviceSize size_, uint32_t usage_, VmaMemoryUsage memory_, uint32_t alloc_flag_) {
-    VkBufferCreateInfo bufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
-    bufferInfo.size = size_;
-    bufferInfo.usage = usage_;
+std::unique_ptr<Buffer> Allocator::CreateBuffer2(VkDeviceSize p_buffer_size, uint32_t p_buffer_usage,
+                                                 VmaMemoryUsage p_alloc_usage, uint32_t p_alloc_flag) {
+    VkBufferCreateInfo bufferInfo = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
+    bufferInfo.size = p_buffer_size;
+    bufferInfo.usage = p_buffer_usage;
 
     VmaAllocationCreateInfo allocInfo = {};
-    allocInfo.usage = memory_;
-    allocInfo.flags = alloc_flag_;
+    allocInfo.usage = p_alloc_usage;
+    allocInfo.flags = p_alloc_flag;
     // allocInfo.memoryTypeBits = memory_;
 
     VkBuffer buffer;
@@ -61,7 +60,27 @@ std::unique_ptr<Buffer> Allocator::CreateBuffer2(VkDeviceSize size_, uint32_t us
     return std::make_unique<Buffer>(allocator, buffer, allocation);
 }
 
-void Allocator::Destroy() {
+std::unique_ptr<Buffer> Allocator::CreateImage(VkExtent2D extent, uint32_t p_buffer_usage, VmaMemoryUsage p_alloc_usage,
+                                               uint32_t p_alloc_flag) {
+    VkImageCreateInfo imageInfo = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
+    imageInfo.imageType = VK_IMAGE_TYPE_2D;
+    imageInfo.format = VK_FORMAT_B8G8R8_UNORM;
+    imageInfo.extent = {extent.width, extent.height, 1};
+    imageInfo.usage = p_buffer_usage;
+
+    VmaAllocationCreateInfo allocInfo = {};
+    allocInfo.usage = p_alloc_usage;
+    allocInfo.flags = p_alloc_flag;
+    // allocInfo.memoryTypeBits = memory_;
+
+    VkImage textureImage;
+    VmaAllocation allocation;
+    vmaCreateImage(allocator, &imageInfo, &allocInfo, &textureImage, &allocation, nullptr);
+
+    return std::make_unique<Buffer>(allocator, textureImage, allocation);
+}
+
+void Allocator::Destroy() const {
     vmaDestroyAllocator(allocator);
 }
 

@@ -14,11 +14,12 @@ namespace lvk {
 class Allocator {
 public:
     explicit Allocator(VulkanContext &context_);
-    void Destroy();
+    void Destroy() const;
     ~Allocator();
 
     std::unique_ptr<Buffer> CreateBuffer(VkDeviceSize size_, uint32_t usage_, VmaMemoryUsage memory_);
-    std::unique_ptr<Buffer> CreateBuffer2(VkDeviceSize size_, uint32_t usage_, VmaMemoryUsage memory_, uint32_t alloc_flag_);
+    std::unique_ptr<Buffer> CreateBuffer2(VkDeviceSize p_buffer_size, uint32_t p_buffer_usage, VmaMemoryUsage p_alloc_usage, uint32_t p_alloc_flag);
+    std::unique_ptr<Buffer> CreateImage(VkExtent2D extent, uint32_t p_buffer_usage, VmaMemoryUsage p_alloc_usage, uint32_t p_alloc_flag);
 
 private:
     VmaAllocator allocator{};

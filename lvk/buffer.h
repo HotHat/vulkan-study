@@ -8,26 +8,33 @@
 #include <vma/vk_mem_alloc.h>
 
 namespace lvk {
+struct Buffer {
+    explicit Buffer(VmaAllocator &allocator_, VkBuffer buffer_, VmaAllocation allocation_) : allocator(allocator_),
+        buffer(buffer_),
+        image(VK_NULL_HANDLE),
+        allocation(allocation_) {
+    }
 
-struct Buffer{
-    explicit Buffer(VmaAllocator &allocator_, VkBuffer buffer_, VmaAllocation allocation_):
-            allocator(allocator_),
-            buffer(buffer_),
-            allocation(allocation_)
-    {}
+    explicit Buffer(VmaAllocator &allocator_, VkImage image_, VmaAllocation allocation_) : allocator(allocator_),
+        image(image_),
+        buffer(VK_NULL_HANDLE),
+        allocation(allocation_) {
+    }
 
     // The Move Constructor
-    Buffer(Buffer&& other) noexcept
+    Buffer(Buffer &&other) noexcept
         : allocator(other.allocator),
           buffer(other.buffer),
-          allocation(other.allocation)
-    {
+          image(other.image),
+          allocation(other.allocation) {
     }
+
     // The Move Assignment Operator
-    Buffer& operator=(Buffer&& other) noexcept {
+    Buffer &operator=(Buffer &&other) noexcept {
         if (this != &other) {
             allocator = other.allocator;
             buffer = other.buffer;
+            image = other.image;
             allocation = other.allocation;
         }
 
@@ -36,11 +43,16 @@ struct Buffer{
 
     void Destroy() const {
         // vmaUnmapMemory(allocator, allocation);
-        vmaDestroyBuffer(allocator, buffer, allocation);
+        if (buffer) {
+            vmaDestroyBuffer(allocator, buffer, allocation);
+        }
+        if (image) {
+            vmaDestroyImage(allocator, image, allocation);
+        }
     }
 
     void CopyData(uint32_t p_size, void *data) {
-        void* mappedData;
+        void *mappedData;
         vmaMapMemory(allocator, allocation, &mappedData);
         memcpy(mappedData, data, p_size);
         vmaUnmapMemory(allocator, allocation);
@@ -63,8 +75,8 @@ struct Buffer{
     size_t size{};
     VmaAllocator &allocator;
     VkBuffer buffer;
+    VkImage image;
     VmaAllocation allocation;
 };
-
 } // end namespace lvk
 #endif //LYH_BUFFER_H

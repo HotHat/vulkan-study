@@ -103,7 +103,7 @@ void DescriptorPool::Cleanup() {
 }
 
 bool DescriptorPool::AllocDescriptor(
-    const VkDescriptorSetLayout descriptorSetLayout, VkDescriptorSet &descriptor) const {
+    const VkDescriptorSetLayout &descriptorSetLayout, VkDescriptorSet &descriptor) const {
     VkDescriptorSetAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     allocInfo.descriptorPool = descriptorPool;
@@ -126,7 +126,7 @@ void DescriptorPool::Free(std::vector<VkDescriptorSet> &descriptors) const {
         descriptors.data());
 }
 
-void DescriptorPool::ResetPool() {
+void DescriptorPool::ResetPool() const {
     vkResetDescriptorPool(device.device, descriptorPool, 0);
 }
 
@@ -183,11 +183,11 @@ bool DescriptorWriter::Build(VkDescriptorSet &set) {
     if (!success) {
         return false;
     }
-    Overwrite(set);
+    overwrite(set);
     return true;
 }
 
-void DescriptorWriter::Overwrite(VkDescriptorSet &set) {
+void DescriptorWriter::overwrite(VkDescriptorSet &set) {
     for (auto &write: writes) {
         write.dstSet = set;
     }
