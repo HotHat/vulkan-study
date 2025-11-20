@@ -37,6 +37,8 @@ public:
     VkCommandBuffer BeginSingleTimeCommands();
     void EndSingleTimeCommands(VkCommandBuffer commandBuffer);
 
+    [[nodiscard]] VulkanContext &GetContext() const { return context; };
+
 private:
     void reset_swapchain(Swapchain swapchain_);
     // void reset_context(VulkanContext context_);

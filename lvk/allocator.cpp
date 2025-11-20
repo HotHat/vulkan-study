@@ -6,7 +6,7 @@
 #include "allocator.h"
 
 namespace lvk {
-Allocator::Allocator(VulkanContext &context_) {
+Allocator::Allocator(VulkanContext &context_): context(context_) {
     VmaVulkanFunctions vulkanFunctions = {};
     vulkanFunctions.vkGetInstanceProcAddr = &vkGetInstanceProcAddr;
     vulkanFunctions.vkGetDeviceProcAddr = &vkGetDeviceProcAddr;
@@ -60,13 +60,18 @@ std::unique_ptr<Buffer> Allocator::CreateBuffer2(VkDeviceSize p_buffer_size, uin
     return std::make_unique<Buffer>(allocator, buffer, allocation);
 }
 
-std::unique_ptr<Buffer> Allocator::CreateImage(VkExtent2D extent, uint32_t p_buffer_usage, VmaMemoryUsage p_alloc_usage,
+std::unique_ptr<Image> Allocator::CreateImage(VkExtent2D extent, VkFormat format, VkImageTiling tiling, uint32_t p_buffer_usage, VmaMemoryUsage p_alloc_usage,
                                                uint32_t p_alloc_flag) {
     VkImageCreateInfo imageInfo = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
     imageInfo.imageType = VK_IMAGE_TYPE_2D;
-    imageInfo.format = VK_FORMAT_B8G8R8_UNORM;
+    imageInfo.format = format;
+    imageInfo.tiling = tiling;
     imageInfo.extent = {extent.width, extent.height, 1};
     imageInfo.usage = p_buffer_usage;
+    imageInfo.mipLevels = 1;
+    imageInfo.arrayLayers = 1;
+    imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+    imageInfo.tiling = VK_IMAGE_TILING_LINEAR;
 
     VmaAllocationCreateInfo allocInfo = {};
     allocInfo.usage = p_alloc_usage;
@@ -77,7 +82,7 @@ std::unique_ptr<Buffer> Allocator::CreateImage(VkExtent2D extent, uint32_t p_buf
     VmaAllocation allocation;
     vmaCreateImage(allocator, &imageInfo, &allocInfo, &textureImage, &allocation, nullptr);
 
-    return std::make_unique<Buffer>(allocator, textureImage, allocation);
+    return std::make_unique<Image>(context, allocator, textureImage, allocation);
 }
 
 void Allocator::Destroy() const {

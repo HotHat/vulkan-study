@@ -19,6 +19,7 @@ class DescriptorSetLayout;
 struct Vertex {
     glm::vec3 pos;
     glm::vec3 color;
+    glm::vec2 uv;
 };
 
 struct GlobalUbo {
@@ -27,31 +28,45 @@ struct GlobalUbo {
 
 class DrawModel {
 public:
-    explicit DrawModel(VulkanContext &context);
+    explicit DrawModel(RenderContext &context);
 
     void load();
-    void load2();
-    void load3();
 
-    void destroy();
+    void load2();
+
+    void LoadVertex();
+
+    void LoadImage();
+
+    void CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
+
+    void TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
+
+    void Destroy();
 
     void DrawRectangle(glm::vec2 pos, glm::vec2 size, glm::vec3 color);
-    void draw(RenderContext &context);
+
+    void Draw();
 
     void create_render_pass();
+
     void CreateGraphicsPipeline();
+
     void CreateGraphicsPipeline2();
+
+    void CreateGraphicsPipeline3(const std::string &vert_file, const std::string &frag_file);
+
     void UpdateUniform(GlobalUbo &ubo);
+
     void UpdateUniform2(VkCommandBuffer command_buffer, GlobalUbo &ubo);
 
-    VulkanContext &context;
-    std::unique_ptr<Allocator> allocator;
-    std::unique_ptr<Buffer> vertex_buffer;
-    std::unique_ptr<Buffer> indices_buffer;
-    std::vector<std::unique_ptr<Buffer>> ubo_buffers;
 
-    VkRenderPass render_pass {};
-    VkPipeline pipeline {};
+    // VulkanContext &context;
+    RenderContext &context;
+
+
+    VkRenderPass render_pass{};
+    VkPipeline pipeline{};
     VkPipelineLayout pipeline_layout{};
     VkPipeline graphics_pipeline{};
 
@@ -65,6 +80,13 @@ private:
     std::vector<Vertex> vertices{};
     std::vector<uint16_t> indices{};
     GlobalUbo globalUbo{};
+
+
+    std::unique_ptr<Allocator> allocator;
+    std::unique_ptr<Buffer> vertex_buffer;
+    std::unique_ptr<Buffer> indices_buffer;
+    std::vector<std::unique_ptr<Buffer> > ubo_buffers;
+    std::unique_ptr<Image> texture{};
 };
 } // end namespace lvk
 

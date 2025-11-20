@@ -11,12 +11,10 @@ namespace lvk {
 struct Buffer {
     explicit Buffer(VmaAllocator &allocator_, VkBuffer buffer_, VmaAllocation allocation_) : allocator(allocator_),
         buffer(buffer_),
-        image(VK_NULL_HANDLE),
         allocation(allocation_) {
     }
 
     explicit Buffer(VmaAllocator &allocator_, VkImage image_, VmaAllocation allocation_) : allocator(allocator_),
-        image(image_),
         buffer(VK_NULL_HANDLE),
         allocation(allocation_) {
     }
@@ -25,7 +23,6 @@ struct Buffer {
     Buffer(Buffer &&other) noexcept
         : allocator(other.allocator),
           buffer(other.buffer),
-          image(other.image),
           allocation(other.allocation) {
     }
 
@@ -34,7 +31,6 @@ struct Buffer {
         if (this != &other) {
             allocator = other.allocator;
             buffer = other.buffer;
-            image = other.image;
             allocation = other.allocation;
         }
 
@@ -43,12 +39,7 @@ struct Buffer {
 
     void Destroy() const {
         // vmaUnmapMemory(allocator, allocation);
-        if (buffer) {
-            vmaDestroyBuffer(allocator, buffer, allocation);
-        }
-        if (image) {
-            vmaDestroyImage(allocator, image, allocation);
-        }
+        vmaDestroyBuffer(allocator, buffer, allocation);
     }
 
     void CopyData(uint32_t p_size, void *data) {
@@ -75,7 +66,6 @@ struct Buffer {
     size_t size{};
     VmaAllocator &allocator;
     VkBuffer buffer;
-    VkImage image;
     VmaAllocation allocation;
 };
 } // end namespace lvk

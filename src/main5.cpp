@@ -50,7 +50,7 @@ struct Init {
         // create_command_buffers_v2(render);
         // create_command_buffers_v3(render, render.image_index);
         model->UpdateUniform(ubo);
-        model->draw(*render);
+        model->Draw();
         // model2.draw(render);
 
         render->RenderPassEnd();
@@ -59,7 +59,7 @@ struct Init {
     }
 
     void Cleanup() const {
-        model->destroy();
+        model->Destroy();
         render->Cleanup();
         context->Cleanup();
         glfwDestroyWindow(window);
@@ -115,11 +115,13 @@ int device_initialization(Init &init) {
 
     //
     init.render = std::make_unique<lvk::RenderContext>(*init.context);
-    init.model = std::make_unique<lvk::DrawModel>(*init.context);
+    init.model = std::make_unique<lvk::DrawModel>(*init.render);
     init.model->DrawRectangle({100.0f, 100.0f}, {100.0f, 100.0f}, {1.0f, 1.0f, 0.0f});
     init.model->DrawRectangle({250.0f, 100.0f}, {100.0f, 100.0f}, {0.0f, 1.0f, 1.0f});
     init.model->DrawRectangle({400.0f, 100.0f}, {100.0f, 100.0f}, {1.0f, 0.0f, 0.0f});
-    init.model->load3();
+    init.model->LoadVertex();
+    //
+    // init.model->LoadImage();
 
     return 0;
 }

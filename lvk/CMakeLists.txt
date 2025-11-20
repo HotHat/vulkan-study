@@ -28,14 +28,15 @@ set(LVK_FILES
         allocator.cpp
         allocator.h
         buffer.h
-)
-
-set(PROJECT_FILES
-        ${LVK_FILES}
+        #
         draw_model.cpp
         draw_model.h
         descriptor.cpp
         descriptor.h
+)
+
+set(PROJECT_FILES
+        ${LVK_FILES}
 )
 
 #NB: switch this to shared library and things stop working. (there is likely two copies of volk somewhere.
@@ -48,5 +49,6 @@ target_include_directories(${PROJECT_NAME} PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR} )
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
-        ${VulkanSDKLib})
+        ${VulkanSDKLib}
+        stb)
 

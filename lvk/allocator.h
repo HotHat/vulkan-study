@@ -8,6 +8,7 @@
 
 #include "vulkan_context.h"
 #include "buffer.h"
+#include "image.h"
 
 namespace lvk {
 
@@ -19,10 +20,11 @@ public:
 
     std::unique_ptr<Buffer> CreateBuffer(VkDeviceSize size_, uint32_t usage_, VmaMemoryUsage memory_);
     std::unique_ptr<Buffer> CreateBuffer2(VkDeviceSize p_buffer_size, uint32_t p_buffer_usage, VmaMemoryUsage p_alloc_usage, uint32_t p_alloc_flag);
-    std::unique_ptr<Buffer> CreateImage(VkExtent2D extent, uint32_t p_buffer_usage, VmaMemoryUsage p_alloc_usage, uint32_t p_alloc_flag);
+    std::unique_ptr<Image> CreateImage(VkExtent2D extent, VkFormat format, VkImageTiling tiling, uint32_t p_buffer_usage, VmaMemoryUsage p_alloc_usage, uint32_t p_alloc_flag);
 
 private:
     VmaAllocator allocator{};
+    VulkanContext &context;
 };
 
 
