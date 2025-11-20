@@ -66,6 +66,8 @@ private:
     std::vector<VkSemaphore> finished_semaphore;
     std::vector<VkFence> in_flight_fences;
     std::vector<VkFence> image_in_flight;
+    VkFence single_fence = VK_NULL_HANDLE;
+
     uint32_t current_frame = 0;
     uint32_t image_index = 0;
 

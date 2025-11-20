@@ -486,13 +486,22 @@ VkCommandBuffer RenderContext::BeginSingleTimeCommands() {
 void RenderContext::EndSingleTimeCommands(VkCommandBuffer commandBuffer) {
     vkEndCommandBuffer(commandBuffer);
 
+    // Create fence to ensure that the command buffer has finished executing
+    VkFenceCreateInfo fence_info{};
+    fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fence_info.flags = 0;
+
+    vkCreateFence(context.device.device, &fence_info, nullptr, &single_fence);
+
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &commandBuffer;
 
-    vkQueueSubmit(graphics_queue, 1, &submitInfo, VK_NULL_HANDLE);
-    vkQueueWaitIdle(graphics_queue);
+    vkQueueSubmit(graphics_queue, 1, &submitInfo, single_fence);
+    // vkQueueWaitIdle(graphics_queue);
+    vkWaitForFences(context.device.device, 1, &single_fence, VK_TRUE, 1000000);
+    vkDestroyFence(context.device.device, single_fence, nullptr);
 
     vkFreeCommandBuffers(context.device.device, command_pool, 1, &commandBuffer);
 }
