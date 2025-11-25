@@ -8,6 +8,8 @@
 #include <vma/vk_mem_alloc.h>
 #include <vulkan/vulkan.h>
 
+#include "vulkan_context.h"
+
 namespace lvk {
 struct Image {
     explicit Image(VulkanContext &context, VmaAllocator &allocator_, VkImage image_, VmaAllocation allocation_): context(context), allocator(allocator_),

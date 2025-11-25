@@ -14,6 +14,8 @@ set(LVK_FILES
         system_info.h
         vulkan_context.h
         swapchain.h
+
+        Vertex.h
         # Source Files
         device.cpp
         feature_chain.cpp
@@ -30,9 +32,9 @@ set(LVK_FILES
         buffer.h
         #
         draw_model.cpp
-        draw_model.h
         descriptor.cpp
         descriptor.h
+        draw_object.h
 )
 
 set(PROJECT_FILES

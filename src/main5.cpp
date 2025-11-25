@@ -16,7 +16,6 @@
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
 
-#include "allocator.h"
 #include "draw_model.h"
 
 
@@ -119,6 +118,11 @@ int device_initialization(Init &init) {
     init.model->DrawRectangle({100.0f, 100.0f}, {100.0f, 100.0f}, {1.0f, 1.0f, 0.0f});
     init.model->DrawRectangle({250.0f, 100.0f}, {100.0f, 100.0f}, {0.0f, 1.0f, 1.0f});
     init.model->DrawRectangle({400.0f, 100.0f}, {100.0f, 100.0f}, {1.0f, 0.0f, 0.0f});
+
+    init.model->AddDrawObject();
+    init.model->DrawTriangle({150.0f, 250.0f}, {200.0f, 350.0f}, {100.0f, 350.0f}, {1.0f, 0.0f, 0.0f});
+    init.model->DrawRectangle({250.0f, 350.0f}, {100.0f, 100.0f}, {0.0f, 1.0f, 1.0f});
+
     init.model->LoadVertex();
     //
     // init.model->LoadImage();

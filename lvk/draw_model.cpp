@@ -5,10 +5,8 @@
 #include "draw_model.h"
 
 #include <array>
-#include <iostream>
 #include <ostream>
 #include <vector>
-#include "allocator.h"
 #include "functions.h"
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -21,15 +19,101 @@ DrawModel::DrawModel(RenderContext &context) : context(context) {
     render_pass = context.GetContext().GetDefaultRenderPass();
     allocator = std::make_unique<Allocator>(context.GetContext());
 
-    vertex_buffer = allocator->CreateBuffer(65535,
-                                            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-                                            VMA_MEMORY_USAGE_CPU_TO_GPU);
-    indices_buffer = allocator->CreateBuffer(65535,
-                                             VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-                                             VMA_MEMORY_USAGE_CPU_TO_GPU);
+    createDescriptorSet();
+    AddDrawObject();
+
+    // draw_objects.emplace_back();
+
+    // vertex_buffers = allocator->CreateBuffer(65535,
+    //                                         VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+    //                                         VMA_MEMORY_USAGE_CPU_TO_GPU);
+    // indices_buffers = allocator->CreateBuffer(65535,
+    //                                          VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+    //                                          VMA_MEMORY_USAGE_CPU_TO_GPU);
+    //
+    // ubo_buffers.resize(Swapchain::MAX_FRAMES_IN_FLIGHT);
+    //
+    // for (auto &ubo_buffer: ubo_buffers) {
+    //     ubo_buffer = allocator->CreateBuffer2(sizeof(GlobalUbo),
+    //                                           VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+    //                                           VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
+    //                                           VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT |
+    //                                           VMA_ALLOCATION_CREATE_MAPPED_BIT
+    //     );
+    // }
+    //
+    // LoadImage();
+    // load3();
+    // createDescriptorSet();
+    // CreateGraphicsPipeline2();
+    // CreateGraphicsPipeline3("../shaders/textures.vert.spv", "../shaders/textures.frag.spv");
+}
+
+void DrawModel::load2() {
+    // vertices = {
+    //     {{-0.0f, -0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+    //     {{0.5f, -0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+    //     {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+    //     {{-0.0f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
+    // };
+    //
+    // indices = {0, 1, 2, 2, 3, 0};
+    //
+    // uint32_t vertice_size = sizeof(vertices[0]) * vertices.size();
+    // uint32_t indices_size = sizeof(indices[0]) * indices.size();
+    //
+    // vertex_buffer = allocator->CreateBuffer(vertice_size,
+    //                                         VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+    //                                         VMA_MEMORY_USAGE_CPU_TO_GPU);
+    // indices_buffer = allocator->CreateBuffer(indices_size,
+    //                                          VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+    //                                          VMA_MEMORY_USAGE_CPU_TO_GPU);
+    //
+    //
+    // vertex_buffer->CopyData(vertice_size, (void *) vertices.data());
+    // vertex_buffer->Flush(0, vertice_size);
+    //
+    // indices_buffer->CopyData(indices_size, (void *) indices.data());
+    // indices_buffer->Flush(0, indices_size);
+}
+
+void DrawModel::AddDrawObject() {
+    CreateGraphicsPipeline2();
+
+    auto draw_object = DrawObject<Vertex2>{};
+    draw_object
+            .WithPipeline(graphics_pipeline)
+            .WithPipelineLayout(pipeline_layout);
+
+    draw_objects.emplace_back(std::move(draw_object));
+}
+
+void DrawModel::LoadVertex() {
+    int32_t index = 0;
+    for (auto const &object: draw_objects) {
+        vertex_buffers[index] = allocator->CreateBuffer(65535,
+                                                        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
+                                                        VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                                                        VMA_MEMORY_USAGE_CPU_TO_GPU);
+        indices_buffers[index] = allocator->CreateBuffer(65535,
+                                                         VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
+                                                         VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                                                         VMA_MEMORY_USAGE_CPU_TO_GPU);
+
+        //
+        uint32_t vertice_size = sizeof(object.vertexes[0]) * object.vertexes.size();
+        uint32_t indices_size = sizeof(object.indices[0]) * object.indices.size();
+
+        vertex_buffers[index]->CopyData(vertice_size, (void *) object.vertexes.data());
+        vertex_buffers[index]->Flush(0, vertice_size);
+
+        indices_buffers[index]->CopyData(indices_size, (void *) object.indices.data());
+        indices_buffers[index]->Flush(0, indices_size);
+
+        index++;
+    }
 
     ubo_buffers.resize(Swapchain::MAX_FRAMES_IN_FLIGHT);
-
     for (auto &ubo_buffer: ubo_buffers) {
         ubo_buffer = allocator->CreateBuffer2(sizeof(GlobalUbo),
                                               VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
@@ -38,43 +122,32 @@ DrawModel::DrawModel(RenderContext &context) : context(context) {
                                               VMA_ALLOCATION_CREATE_MAPPED_BIT
         );
     }
-    //
-    LoadImage();
-    // load3();
-    createDescriptorSet();
-    // CreateGraphicsPipeline2();
-    CreateGraphicsPipeline3("../shaders/textures.vert.spv", "../shaders/textures.frag.spv");
-}
 
-void DrawModel::load2() {
-    vertices = {
-        {{-0.0f, -0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-        {{0.5f, -0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-        {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-        {{-0.0f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
-    };
+    for (int i = 0; i < descriptorSets.size(); i++) {
+        // auto bufferInfo = ubo_buffers[i]->descriptorInfo();
+        auto range = ubo_buffers[i]->size;
 
-    indices = {0, 1, 2, 2, 3, 0};
+        auto bufferInfo = VkDescriptorBufferInfo{
+            ubo_buffers[i]->buffer,
+            0,
+            VK_WHOLE_SIZE
+            // ubo_buffers[i]->size,
+            // range
+        };
 
-    uint32_t vertice_size = sizeof(vertices[0]) * vertices.size();
-    uint32_t indices_size = sizeof(indices[0]) * indices.size();
-
-    vertex_buffer = allocator->CreateBuffer(vertice_size,
-                                            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-                                            VMA_MEMORY_USAGE_CPU_TO_GPU);
-    indices_buffer = allocator->CreateBuffer(indices_size,
-                                             VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-                                             VMA_MEMORY_USAGE_CPU_TO_GPU);
+        // auto textureInfo = VkDescriptorImageInfo{
+        //     texture->sampler,
+        //     texture->imageView,
+        // };
+        // textureInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
 
-    vertex_buffer->CopyData(vertice_size, (void *) vertices.data());
-    vertex_buffer->Flush(0, vertice_size);
+        DescriptorWriter(*descriptorSetLayout, *descriptorPool)
+                .WriteBuffer(0, &bufferInfo)
+                // .WriteImage(1, &textureInfo)
+                .Build(descriptorSets[i]);
+    }
 
-    indices_buffer->CopyData(indices_size, (void *) indices.data());
-    indices_buffer->Flush(0, indices_size);
-}
-
-void DrawModel::LoadVertex() {
     // vertices = {
     //     // {{-0.0f, -0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}},
     //     // {{0.5f, -0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}},
@@ -87,17 +160,17 @@ void DrawModel::LoadVertex() {
     // };
     //
     // indices = {0, 1, 2, 2, 3, 0};
-    assert(!indices.empty() && "indices is empty");
-
-    uint32_t vertice_size = sizeof(vertices[0]) * vertices.size();
-    uint32_t indices_size = sizeof(indices[0]) * indices.size();
-
-
-    vertex_buffer->CopyData(vertice_size, (void *) vertices.data());
-    vertex_buffer->Flush(0, vertice_size);
-
-    indices_buffer->CopyData(indices_size, (void *) indices.data());
-    indices_buffer->Flush(0, indices_size);
+    // assert(!indices.empty() && "indices is empty");
+    //
+    // uint32_t vertice_size = sizeof(vertices[0]) * vertices.size();
+    // uint32_t indices_size = sizeof(indices[0]) * indices.size();
+    //
+    //
+    // vertex_buffer->CopyData(vertice_size, (void *) vertices.data());
+    // vertex_buffer->Flush(0, vertice_size);
+    //
+    // indices_buffer->CopyData(indices_size, (void *) indices.data());
+    // indices_buffer->Flush(0, indices_size);
 
 
     // auto extent = context.swapchain.extent;
@@ -134,25 +207,25 @@ void DrawModel::LoadImage() {
     //
     stbi_image_free(pixels);
 
-    texture = allocator->CreateImage(
-        {static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight)},
-        VK_FORMAT_R8G8B8A8_SRGB,
-        VK_IMAGE_TILING_OPTIMAL,
-        VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-        VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
-        VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT
-    );
-
-
-    TransitionImageLayout(texture->image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED,
-                          VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-
-    CopyBufferToImage(texture_buffer->buffer, texture->image, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
-
-    TransitionImageLayout(texture->image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                          VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
-    texture_buffer->Destroy();
+    // texture = allocator->CreateImage(
+    //     {static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight)},
+    //     VK_FORMAT_R8G8B8A8_SRGB,
+    //     VK_IMAGE_TILING_OPTIMAL,
+    //     VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+    //     VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
+    //     VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT
+    // );
+    //
+    //
+    // TransitionImageLayout(texture->image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED,
+    //                       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    //
+    // CopyBufferToImage(texture_buffer->buffer, texture->image, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
+    //
+    // TransitionImageLayout(texture->image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+    //                       VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    //
+    // texture_buffer->Destroy();
     // texture->Destroy();
 }
 
@@ -228,38 +301,43 @@ void DrawModel::TransitionImageLayout(VkImage image, VkFormat format, VkImageLay
     context.EndSingleTimeCommands(commandBuffer);
 }
 
+
 void DrawModel::load() {
-    vertices = {
-        {{-0.0f, -0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}},
-        {{0.5f, -0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}},
-        {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}},
-        {{-0.0f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}}
-    };
-
-    indices = {0, 1, 2, 2, 3, 0};
-
-    uint32_t vertice_size = sizeof(vertices[0]) * vertices.size();
-    uint32_t indices_size = sizeof(indices[0]) * indices.size();
-
-    vertex_buffer = allocator->CreateBuffer(vertice_size,
-                                            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-                                            VMA_MEMORY_USAGE_CPU_TO_GPU);
-    indices_buffer = allocator->CreateBuffer(indices_size,
-                                             VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-                                             VMA_MEMORY_USAGE_CPU_TO_GPU);
-
-
-    vertex_buffer->CopyData(vertice_size, (void *) vertices.data());
-    vertex_buffer->Flush(0, vertice_size);
-
-    indices_buffer->CopyData(indices_size, (void *) indices.data());
-    indices_buffer->Flush(0, indices_size);
+    // vertices = {
+    //     {{-0.0f, -0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}},
+    //     {{0.5f, -0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}},
+    //     {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}},
+    //     {{-0.0f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}}
+    // };
+    //
+    // indices = {0, 1, 2, 2, 3, 0};
+    //
+    // uint32_t vertice_size = sizeof(vertices[0]) * vertices.size();
+    // uint32_t indices_size = sizeof(indices[0]) * indices.size();
+    //
+    // vertex_buffer = allocator->CreateBuffer(vertice_size,
+    //                                         VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+    //                                         VMA_MEMORY_USAGE_CPU_TO_GPU);
+    // indices_buffer = allocator->CreateBuffer(indices_size,
+    //                                          VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+    //                                          VMA_MEMORY_USAGE_CPU_TO_GPU);
+    //
+    //
+    // vertex_buffer->CopyData(vertice_size, (void *) vertices.data());
+    // vertex_buffer->Flush(0, vertice_size);
+    //
+    // indices_buffer->CopyData(indices_size, (void *) indices.data());
+    // indices_buffer->Flush(0, indices_size);
 }
 
 void DrawModel::Destroy() {
-    vertex_buffer->Destroy();
-    indices_buffer->Destroy();
-    texture->Destroy();
+    for (auto const &buffer: vertex_buffers) {
+        buffer.second->Destroy();
+    }
+    for (auto const &buffer: indices_buffers) {
+        buffer.second->Destroy();
+    }
+    // texture->Destroy();
 
     for (int i = 0; i < ubo_buffers.size(); i++) {
         ubo_buffers[i]->Destroy();
@@ -270,42 +348,59 @@ void DrawModel::Destroy() {
     descriptorPool->Cleanup();
     descriptorSetLayout->Cleanup();
 
-    vkDestroyPipeline(context.GetContext().device.device, graphics_pipeline, nullptr);
-    vkDestroyPipelineLayout(context.GetContext().device.device, pipeline_layout, nullptr);
+    for (auto const &object: draw_objects) {
+        vkDestroyPipeline(context.GetContext().device.device, object.graphics_pipeline, nullptr);
+        vkDestroyPipelineLayout(context.GetContext().device.device, object.pipeline_layout, nullptr);
+    }
+}
+
+void DrawModel::DrawTriangle(glm::vec2 p1, glm::vec2 p2, glm::vec2 p3, glm::vec3 color) {
+    auto &top = draw_objects.back();
+
+    top.AddTriangle(
+        Vertex2(glm::vec3(p1.x, p1.y, 0.0f), color),
+        Vertex2(glm::vec3(p2.x, p2.y, 0.0f), color),
+        Vertex2(glm::vec3(p3.x, p3.y, 0.0f), color)
+    );
 }
 
 void DrawModel::DrawRectangle(glm::vec2 pos, glm::vec2 size, glm::vec3 color) {
-    uint32_t vertice_size = vertices.size();
-    vertices.emplace_back(Vertex(glm::vec3(pos.x, pos.y, 0.0f), color, {1.0f, 0.0f}));
-    vertices.emplace_back(Vertex(glm::vec3(pos.x + size.x, pos.y, 0.0f), color, {0.0f, 0.0f}));
-    vertices.emplace_back(Vertex(glm::vec3(pos.x + size.x, pos.y + size.y, 0.0f), color, {0.0f, 1.0f}));
-    vertices.emplace_back(Vertex(glm::vec3(pos.x, pos.y + size.y, 0.0f), color, {1.0f, 1.0f}));
+    auto &top = draw_objects.back();
 
-    indices.emplace_back(vertice_size);
-    indices.emplace_back(vertice_size + 1);
-    indices.emplace_back(vertice_size + 2);
-    indices.emplace_back(vertice_size + 2);
-    indices.emplace_back(vertice_size + 3);
-    indices.emplace_back(vertice_size);
+    top.AddRectangle(
+        Vertex2(glm::vec3(pos.x, pos.y, 0.0f), color),
+        Vertex2(glm::vec3(pos.x + size.x, pos.y, 0.0f), color),
+        Vertex2(glm::vec3(pos.x + size.x, pos.y + size.y, 0.0f), color),
+        Vertex2(glm::vec3(pos.x, pos.y + size.y, 0.0f), color)
+    );
 }
 
+
 void DrawModel::Draw() {
+    assert(!draw_objects.empty() && "without draw objects");
+    assert(!vertex_buffers.empty() && "init vertex buffer first");
+
     // auto current_frame_ = context.image_index;
     auto current_image_index = context.GetCurrentImageIndex();
     auto commandBuffer = context.GetCurrentCommandBuffer();
 
-    VkBuffer vertexBuffers[] = {vertex_buffer->buffer};
-    VkDeviceSize offsets[] = {0};
+    uint32_t index = 0;
+    for (auto const &object: draw_objects) {
+        VkBuffer vertexBuffers[] = {vertex_buffers[index]->buffer};
+        VkDeviceSize offsets[] = {0};
 
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline);
+        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.graphics_pipeline);
 
-    vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+        vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
 
-    vkCmdBindIndexBuffer(commandBuffer, indices_buffer->buffer, 0, VK_INDEX_TYPE_UINT16);
+        vkCmdBindIndexBuffer(commandBuffer, indices_buffers[index]->buffer, 0, VK_INDEX_TYPE_UINT16);
 
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1,
-                            &descriptorSets[current_image_index], 0, nullptr);
-    vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.pipeline_layout, 0, 1,
+                                &descriptorSets[current_image_index], 0, nullptr);
+        vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(object.indices.size()), 1, 0, 0, 0);
+        //
+        index++;
+    }
 }
 
 void DrawModel::CreateGraphicsPipeline() {
@@ -334,18 +429,18 @@ void DrawModel::CreateGraphicsPipeline() {
 
     VkVertexInputBindingDescription bindingDescription{};
     bindingDescription.binding = 0;
-    bindingDescription.stride = sizeof(Vertex);
+    bindingDescription.stride = sizeof(Vertex2);
     bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
     std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions{};
     attributeDescriptions[0].binding = 0;
     attributeDescriptions[0].location = 0;
     attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
-    attributeDescriptions[0].offset = offsetof(Vertex, pos);
+    attributeDescriptions[0].offset = offsetof(Vertex2, pos);
     attributeDescriptions[1].binding = 0;
     attributeDescriptions[1].location = 1;
     attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-    attributeDescriptions[1].offset = offsetof(Vertex, color);
+    attributeDescriptions[1].offset = offsetof(Vertex2, color);
 
     VkPipelineVertexInputStateCreateInfo vertex_input_info = {};
     vertex_input_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -478,23 +573,15 @@ void DrawModel::CreateGraphicsPipeline2() {
 
     VkVertexInputBindingDescription bindingDescription{};
     bindingDescription.binding = 0;
-    bindingDescription.stride = sizeof(Vertex);
+    bindingDescription.stride = sizeof(Vertex2);
     bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-    std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions{};
-    attributeDescriptions[0].binding = 0;
-    attributeDescriptions[0].location = 0;
-    attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-    attributeDescriptions[0].offset = offsetof(Vertex, pos);
-    attributeDescriptions[1].binding = 0;
-    attributeDescriptions[1].location = 1;
-    attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-    attributeDescriptions[1].offset = offsetof(Vertex, color);
+    auto attributeDescriptions = Vertex2::GetAttributeDescriptions();
 
     VkPipelineVertexInputStateCreateInfo vertex_input_info = {};
     vertex_input_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     vertex_input_info.vertexBindingDescriptionCount = 1;
-    vertex_input_info.vertexAttributeDescriptionCount = 2;
+    vertex_input_info.vertexAttributeDescriptionCount = attributeDescriptions.size();
     vertex_input_info.pVertexBindingDescriptions = &bindingDescription;
     vertex_input_info.pVertexAttributeDescriptions = attributeDescriptions.data();
 
@@ -625,22 +712,22 @@ void DrawModel::CreateGraphicsPipeline3(const std::string &vert_file, const std:
 
     VkVertexInputBindingDescription bindingDescription{};
     bindingDescription.binding = 0;
-    bindingDescription.stride = sizeof(Vertex);
+    bindingDescription.stride = sizeof(Vertex3);
     bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
     std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions{};
     attributeDescriptions[0].binding = 0;
     attributeDescriptions[0].location = 0;
     attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-    attributeDescriptions[0].offset = offsetof(Vertex, pos);
+    attributeDescriptions[0].offset = offsetof(Vertex3, pos);
     attributeDescriptions[1].binding = 0;
     attributeDescriptions[1].location = 1;
     attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-    attributeDescriptions[1].offset = offsetof(Vertex, color);
+    attributeDescriptions[1].offset = offsetof(Vertex3, color);
     attributeDescriptions[2].binding = 0;
     attributeDescriptions[2].location = 2;
     attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
-    attributeDescriptions[2].offset = offsetof(Vertex, uv);
+    attributeDescriptions[2].offset = offsetof(Vertex3, uv);
 
     VkPipelineVertexInputStateCreateInfo vertex_input_info = {};
     vertex_input_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -748,6 +835,7 @@ void DrawModel::CreateGraphicsPipeline3(const std::string &vert_file, const std:
     vkDestroyShaderModule(context.GetContext().device.device, frag_module, nullptr);
     vkDestroyShaderModule(context.GetContext().device.device, vert_module, nullptr);
 }
+
 void DrawModel::UpdateUniform(GlobalUbo &ubo) {
     for (int i = 0; i < ubo_buffers.size(); i++) {
         ubo_buffers[i]->CopyData(sizeof(GlobalUbo), (void *) &ubo);
@@ -781,41 +869,16 @@ void DrawModel::createDescriptorSet() {
             DescriptorPool::Builder(context.GetContext().device)
             .SetMaxSets(Swapchain::MAX_FRAMES_IN_FLIGHT)
             .AddPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, Swapchain::MAX_FRAMES_IN_FLIGHT)
-            .AddPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, Swapchain::MAX_FRAMES_IN_FLIGHT)
+            // .AddPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, Swapchain::MAX_FRAMES_IN_FLIGHT)
             .Build();
 
     descriptorSetLayout =
             DescriptorSetLayout::Builder(context.GetContext().device)
             .AddBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS)
-            .AddBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+            // .AddBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
             .Build();
 
     descriptorSets.resize(Swapchain::MAX_FRAMES_IN_FLIGHT);
-
-    for (int i = 0; i < descriptorSets.size(); i++) {
-        // auto bufferInfo = ubo_buffers[i]->descriptorInfo();
-        auto range = ubo_buffers[i]->size;
-
-        auto bufferInfo = VkDescriptorBufferInfo{
-            ubo_buffers[i]->buffer,
-            0,
-            VK_WHOLE_SIZE
-            // ubo_buffers[i]->size,
-            // range
-        };
-
-        auto textureInfo = VkDescriptorImageInfo{
-            texture->sampler,
-            texture->imageView,
-        };
-        textureInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-
-        DescriptorWriter(*descriptorSetLayout, *descriptorPool)
-                .WriteBuffer(0, &bufferInfo)
-                .WriteImage(1, &textureInfo)
-                .Build(descriptorSets[i]);
-    }
 }
 
 void DrawModel::create_render_pass() {
