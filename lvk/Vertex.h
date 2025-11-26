@@ -9,9 +9,14 @@
 
 namespace lvk {
 
+using vec2 = glm::vec2;
+using vec3 = glm::vec3;
+
 struct Vertex2 {
     glm::vec3 pos;
     glm::vec3 color;
+
+    Vertex2(glm::vec3 pos, glm::vec3 color) : pos(pos), color(color) {}
 
     static std::vector<VkVertexInputAttributeDescription> GetAttributeDescriptions() {
         std::vector<VkVertexInputAttributeDescription> attributeDescriptions(2);
@@ -27,10 +32,12 @@ struct Vertex2 {
     }
 };
 
-struct Vertex3 {
+struct Vertex3{
     glm::vec3 pos;
     glm::vec3 color;
     glm::vec2 uv;
+
+    Vertex3(glm::vec3 pos, glm::vec3 color, vec2 uv) : pos(pos), color(color), uv(uv) {}
 
     static std::vector<VkVertexInputAttributeDescription> GetAttributeDescriptions() {
         std::vector<VkVertexInputAttributeDescription> attributeDescriptions(3);

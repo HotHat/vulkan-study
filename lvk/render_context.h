@@ -11,6 +11,8 @@
 #include <vulkan/vulkan.h>
 #include <vector>
 
+#include "allocator.h"
+
 
 namespace lvk {
 class RenderContext {
@@ -38,6 +40,7 @@ public:
     void EndSingleTimeCommands(VkCommandBuffer commandBuffer);
 
     [[nodiscard]] VulkanContext &GetContext() const { return context; };
+    [[nodiscard]] Allocator &GetAllocator() const { return *allocator; };
 
 private:
     void reset_swapchain(Swapchain swapchain_);
@@ -75,6 +78,9 @@ private:
 
     VulkanContext &context;
     bool debug_mode = false;
+
+    //
+    std::unique_ptr<Allocator> allocator;
     // Swapchain swapchain;
     // Device device;
 };

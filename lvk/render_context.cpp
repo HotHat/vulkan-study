@@ -24,6 +24,9 @@ RenderContext::RenderContext(VulkanContext &context) : context(context) {
     create_command_pool();
     create_command_buffers();
     create_sync_objects();
+
+    //
+    allocator = std::make_unique<Allocator>(context);
 }
 
 void RenderContext::reset_swapchain(Swapchain swapchain_) {
@@ -110,6 +113,9 @@ void RenderContext::create_sync_objects() {
 }
 
 void RenderContext::Cleanup() {
+    //
+    allocator->Destroy();
+
     for (size_t i = 0; i < context.swapchain.image_count; i++) {
         vkDestroySemaphore(context.device.device, finished_semaphore[i], nullptr);
     }

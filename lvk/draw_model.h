@@ -31,6 +31,8 @@ public:
 
     void AddDrawObject();
 
+    void AddDrawTextureObject();
+
     void LoadVertex();
 
     void LoadImage();
@@ -43,6 +45,7 @@ public:
 
     void DrawTriangle(glm::vec2 p1, glm::vec2 p2, glm::vec2 p3, glm::vec3 color);
     void DrawRectangle(glm::vec2 pos, glm::vec2 size, glm::vec3 color);
+    void DrawRectangleUv(glm::vec2 pos, glm::vec2 size, glm::vec3 color);
 
     void Draw();
 
@@ -78,14 +81,17 @@ private:
     // std::vector<Vertex> vertices{};
     // std::vector<uint16_t> indices{};
 
-    std::vector<DrawObject<Vertex2>> draw_objects{};
+    std::vector<DrawObjectType> draw_objects{};
 
     GlobalUbo globalUbo{};
 
 
-    std::unique_ptr<Allocator> allocator;
+    // std::unique_ptr<Allocator> allocator;
+    //
     std::unordered_map<uint32_t, std::unique_ptr<Buffer>> vertex_buffers;
     std::unordered_map<uint32_t, std::unique_ptr<Buffer>> indices_buffers;
+    std::unordered_map<uint32_t, std::vector<VkDescriptorSet>> descriptor_sets;
+    //
     std::vector<std::unique_ptr<Buffer> > ubo_buffers;
     // std::unique_ptr<Image> texture{};
 };

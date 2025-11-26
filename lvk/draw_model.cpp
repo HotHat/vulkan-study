@@ -9,7 +9,7 @@
 #include <vector>
 #include "functions.h"
 #include <glm/gtc/matrix_transform.hpp>
-
+#include <variant>
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
@@ -17,7 +17,7 @@ namespace lvk {
 DrawModel::DrawModel(RenderContext &context) : context(context) {
     // create_render_pass();
     render_pass = context.GetContext().GetDefaultRenderPass();
-    allocator = std::make_unique<Allocator>(context.GetContext());
+    // allocator = std::make_unique<Allocator>(context.GetContext());
 
     createDescriptorSet();
     AddDrawObject();
@@ -80,7 +80,8 @@ void DrawModel::load2() {
 void DrawModel::AddDrawObject() {
     CreateGraphicsPipeline2();
 
-    auto draw_object = DrawObject<Vertex2>{};
+    DrawObjectVector2 draw_object = DrawObject<Vertex2>();
+    // auto obj = static_cast<DrawObjectVector2>(draw_object);
     draw_object
             .WithPipeline(graphics_pipeline)
             .WithPipelineLayout(pipeline_layout);
@@ -88,65 +89,173 @@ void DrawModel::AddDrawObject() {
     draw_objects.emplace_back(std::move(draw_object));
 }
 
+void DrawModel::AddDrawTextureObject() {
+    CreateGraphicsPipeline3("../shaders/textures.vert.spv", "../shaders/textures.frag.spv");
+
+    auto texture = std::make_unique<Texture>(context);
+    texture->LoadImage("textures/texture.jpg");
+
+    auto draw_object = DrawObjectVector3{};
+    draw_object
+            .WithPipeline(graphics_pipeline)
+            .WithPipelineLayout(pipeline_layout)
+            .WithTexture(texture);
+
+    draw_objects.emplace_back(std::move(draw_object));
+}
+
 void DrawModel::LoadVertex() {
+    ubo_buffers.resize(Swapchain::MAX_FRAMES_IN_FLIGHT);
+    for (auto &ubo_buffer: ubo_buffers) {
+        ubo_buffer = context.GetAllocator().CreateBuffer2(sizeof(GlobalUbo),
+                                                          VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT |
+                                                          VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                                                          VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
+                                                          VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT |
+                                                          VMA_ALLOCATION_CREATE_MAPPED_BIT
+        );
+    }
+
     int32_t index = 0;
-    for (auto const &object: draw_objects) {
-        vertex_buffers[index] = allocator->CreateBuffer(65535,
-                                                        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
-                                                        VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-                                                        VMA_MEMORY_USAGE_CPU_TO_GPU);
-        indices_buffers[index] = allocator->CreateBuffer(65535,
-                                                         VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
-                                                         VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-                                                         VMA_MEMORY_USAGE_CPU_TO_GPU);
+    for (auto const &obj: draw_objects) {
+        auto vi = obj.index();
 
+        if (vi == 0) {
+            auto const &object = std::get<DrawObject<Vertex2> >(obj);
+            uint32_t vertice_size = sizeof(object.GetVertexes()[0]) * object.GetVertexes().size();
+            uint32_t indices_size = sizeof(object.GetIndices()[0]) * object.GetIndices().size();
+
+            vertex_buffers[index] = context.GetAllocator().CreateBuffer(vertice_size,
+                                                                        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
+                                                                        VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                                                                        VMA_MEMORY_USAGE_CPU_TO_GPU);
+            indices_buffers[index] = context.GetAllocator().CreateBuffer(indices_size,
+                                                                         VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
+                                                                         VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                                                                         VMA_MEMORY_USAGE_CPU_TO_GPU);
+
+            //
+            vertex_buffers[index]->CopyData(vertice_size, (void *) object.GetVertexes().data());
+            vertex_buffers[index]->Flush(0, vertice_size);
+
+            indices_buffers[index]->CopyData(indices_size, (void *) object.GetIndices().data());
+            indices_buffers[index]->Flush(0, indices_size);
+
+            descriptor_sets[vi].resize(descriptorSets.size());
+            for (int i = 0; i < descriptorSets.size(); i++) {
+                auto bufferInfo = VkDescriptorBufferInfo{
+                    ubo_buffers[i]->buffer,
+                    0,
+                    VK_WHOLE_SIZE
+                    // ubo_buffers[i]->size,
+                    // range
+                };
+                DescriptorWriter(*descriptorSetLayout, *descriptorPool)
+                        .WriteBuffer(0, &bufferInfo)
+                        .Build(descriptor_sets[vi][i]);
+                // if (vi == 1) {
+                //     auto &texture = object.GetTexture();
+                //     auto textureInfo = VkDescriptorImageInfo{
+                //         texture.GetSampler(),
+                //         texture.GetImageView(),
+                //     };
+                //
+                //     textureInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                //     writer.WriteImage(1, &textureInfo);
+                // }
+
+                // writer.Build(descriptor_sets[vi][i]);
+
+                // DescriptorWriter(*descriptorSetLayout, *descriptorPool)
+                // .WriteBuffer(0, &bufferInfo)
+                // .Build(descriptorSets[i]);
+            }
+        } else {
+            auto const &object = std::get<DrawObject<Vertex3> >(obj);
+            uint32_t vertice_size = sizeof(object.GetVertexes()[0]) * object.GetVertexes().size();
+            uint32_t indices_size = sizeof(object.GetIndices()[0]) * object.GetIndices().size();
+
+            vertex_buffers[index] = context.GetAllocator().CreateBuffer(vertice_size,
+                                                                        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
+                                                                        VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                                                                        VMA_MEMORY_USAGE_CPU_TO_GPU);
+            indices_buffers[index] = context.GetAllocator().CreateBuffer(indices_size,
+                                                                         VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
+                                                                         VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                                                                         VMA_MEMORY_USAGE_CPU_TO_GPU);
+
+            //
+            vertex_buffers[index]->CopyData(vertice_size, (void *) object.GetVertexes().data());
+            vertex_buffers[index]->Flush(0, vertice_size);
+
+            indices_buffers[index]->CopyData(indices_size, (void *) object.GetIndices().data());
+            indices_buffers[index]->Flush(0, indices_size);
+
+            descriptor_sets[vi].resize(descriptorSets.size());
+            for (int i = 0; i < descriptorSets.size(); i++) {
+                auto bufferInfo = VkDescriptorBufferInfo{
+                    ubo_buffers[i]->buffer,
+                    0,
+                    VK_WHOLE_SIZE
+                    // ubo_buffers[i]->size,
+                    // range
+                };
+                auto &texture = object.GetTexture();
+                auto textureInfo = VkDescriptorImageInfo{
+                    texture.GetSampler(),
+                    texture.GetImageView(),
+                };
+
+                textureInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                DescriptorWriter(*descriptorSetLayout, *descriptorPool)
+                        .WriteBuffer(0, &bufferInfo)
+                        .WriteImage(1, &textureInfo)
+                        .Build(descriptor_sets[vi][i]);
+
+                // writer.WriteImage(1, &textureInfo);
+
+                // writer.Build(descriptor_sets[vi][i]);
+
+                // DescriptorWriter(*descriptorSetLayout, *descriptorPool)
+                // .WriteBuffer(0, &bufferInfo)
+                // .Build(descriptorSets[i]);
+            }
+        }
         //
-        uint32_t vertice_size = sizeof(object.vertexes[0]) * object.vertexes.size();
-        uint32_t indices_size = sizeof(object.indices[0]) * object.indices.size();
 
-        vertex_buffers[index]->CopyData(vertice_size, (void *) object.vertexes.data());
-        vertex_buffers[index]->Flush(0, vertice_size);
 
-        indices_buffers[index]->CopyData(indices_size, (void *) object.indices.data());
-        indices_buffers[index]->Flush(0, indices_size);
+        /*
+        descriptor_sets[vi].resize(Swapchain::MAX_FRAMES_IN_FLIGHT);
+        if (vi == 0) {
+            for (int i = 0; i < descriptorSets.size(); i++) {
+                auto bufferInfo = VkDescriptorBufferInfo{
+                    ubo_buffers[i]->buffer,
+                    0,
+                    VK_WHOLE_SIZE
+                    // ubo_buffers[i]->size,
+                    // range
+                };
+
+                // auto textureInfo = VkDescriptorImageInfo{
+                //     texture->sampler,
+                //     texture->imageView,
+                // };
+                // textureInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+
+                DescriptorWriter(*descriptorSetLayout, *descriptorPool)
+                        .WriteBuffer(0, &bufferInfo)
+                        // .WriteImage(1, &textureInfo)
+                        .Build(descriptorSets[i]);
+            }
+        } else {
+        }
+        */
+
 
         index++;
     }
 
-    ubo_buffers.resize(Swapchain::MAX_FRAMES_IN_FLIGHT);
-    for (auto &ubo_buffer: ubo_buffers) {
-        ubo_buffer = allocator->CreateBuffer2(sizeof(GlobalUbo),
-                                              VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-                                              VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
-                                              VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT |
-                                              VMA_ALLOCATION_CREATE_MAPPED_BIT
-        );
-    }
-
-    for (int i = 0; i < descriptorSets.size(); i++) {
-        // auto bufferInfo = ubo_buffers[i]->descriptorInfo();
-        auto range = ubo_buffers[i]->size;
-
-        auto bufferInfo = VkDescriptorBufferInfo{
-            ubo_buffers[i]->buffer,
-            0,
-            VK_WHOLE_SIZE
-            // ubo_buffers[i]->size,
-            // range
-        };
-
-        // auto textureInfo = VkDescriptorImageInfo{
-        //     texture->sampler,
-        //     texture->imageView,
-        // };
-        // textureInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-
-        DescriptorWriter(*descriptorSetLayout, *descriptorPool)
-                .WriteBuffer(0, &bufferInfo)
-                // .WriteImage(1, &textureInfo)
-                .Build(descriptorSets[i]);
-    }
 
     // vertices = {
     //     // {{-0.0f, -0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}},
@@ -198,10 +307,10 @@ void DrawModel::LoadImage() {
     if (!pixels) {
         throw std::runtime_error("failed to load texture image!");
     }
-    auto texture_buffer = allocator->CreateBuffer2(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                                                   VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
-                                                   VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT |
-                                                   VMA_ALLOCATION_CREATE_MAPPED_BIT);
+    auto texture_buffer = context.GetAllocator().CreateBuffer2(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                                                               VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
+                                                               VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT |
+                                                               VMA_ALLOCATION_CREATE_MAPPED_BIT);
     texture_buffer->CopyData(imageSize, (void *) pixels);
     texture_buffer->Flush(0, imageSize);
     //
@@ -343,12 +452,12 @@ void DrawModel::Destroy() {
         ubo_buffers[i]->Destroy();
     }
 
-    allocator->Destroy();
 
     descriptorPool->Cleanup();
     descriptorSetLayout->Cleanup();
 
-    for (auto const &object: draw_objects) {
+    for (auto const &obj: draw_objects) {
+        auto &object = std::get<DrawObjectVector2>(obj);
         vkDestroyPipeline(context.GetContext().device.device, object.graphics_pipeline, nullptr);
         vkDestroyPipelineLayout(context.GetContext().device.device, object.pipeline_layout, nullptr);
     }
@@ -357,7 +466,9 @@ void DrawModel::Destroy() {
 void DrawModel::DrawTriangle(glm::vec2 p1, glm::vec2 p2, glm::vec2 p3, glm::vec3 color) {
     auto &top = draw_objects.back();
 
-    top.AddTriangle(
+    auto &obj = std::get<DrawObjectVector2>(top);
+
+    obj.AddTriangle(
         Vertex2(glm::vec3(p1.x, p1.y, 0.0f), color),
         Vertex2(glm::vec3(p2.x, p2.y, 0.0f), color),
         Vertex2(glm::vec3(p3.x, p3.y, 0.0f), color)
@@ -367,7 +478,9 @@ void DrawModel::DrawTriangle(glm::vec2 p1, glm::vec2 p2, glm::vec2 p3, glm::vec3
 void DrawModel::DrawRectangle(glm::vec2 pos, glm::vec2 size, glm::vec3 color) {
     auto &top = draw_objects.back();
 
-    top.AddRectangle(
+    auto &obj = std::get<DrawObjectVector2>(top);
+
+    obj.AddRectangle(
         Vertex2(glm::vec3(pos.x, pos.y, 0.0f), color),
         Vertex2(glm::vec3(pos.x + size.x, pos.y, 0.0f), color),
         Vertex2(glm::vec3(pos.x + size.x, pos.y + size.y, 0.0f), color),
@@ -375,6 +488,18 @@ void DrawModel::DrawRectangle(glm::vec2 pos, glm::vec2 size, glm::vec3 color) {
     );
 }
 
+void DrawModel::DrawRectangleUv(glm::vec2 pos, glm::vec2 size, glm::vec3 color) {
+    auto &top = draw_objects.back();
+
+    auto &obj = std::get<DrawObjectVector3>(top);
+
+    obj.AddRectangle(
+        Vertex3(glm::vec3(pos.x, pos.y, 0.0f), color, {1.0f, 0.0f}),
+        Vertex3(glm::vec3(pos.x + size.x, pos.y, 0.0f), color, {0.0f, 0.0f}),
+        Vertex3(glm::vec3(pos.x + size.x, pos.y + size.y, 0.0f), color, {0.0f, 1.0f}),
+        Vertex3(glm::vec3(pos.x, pos.y + size.y, 0.0f), color, {1.0f, 1.0f})
+    );
+}
 
 void DrawModel::Draw() {
     assert(!draw_objects.empty() && "without draw objects");
@@ -384,21 +509,43 @@ void DrawModel::Draw() {
     auto current_image_index = context.GetCurrentImageIndex();
     auto commandBuffer = context.GetCurrentCommandBuffer();
 
-    uint32_t index = 0;
-    for (auto const &object: draw_objects) {
-        VkBuffer vertexBuffers[] = {vertex_buffers[index]->buffer};
-        VkDeviceSize offsets[] = {0};
+    auto index = 0;
+    for (auto const &obj: draw_objects) {
+        auto vi = obj.index();
 
-        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.graphics_pipeline);
+        if (vi == 0) {
+            auto const &object = std::get<DrawObjectVector2>(obj);
 
-        vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+            VkBuffer vertexBuffers[] = {vertex_buffers[index]->buffer};
+            VkDeviceSize offsets[] = {0};
 
-        vkCmdBindIndexBuffer(commandBuffer, indices_buffers[index]->buffer, 0, VK_INDEX_TYPE_UINT16);
+            vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.graphics_pipeline);
 
-        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.pipeline_layout, 0, 1,
-                                &descriptorSets[current_image_index], 0, nullptr);
-        vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(object.indices.size()), 1, 0, 0, 0);
-        //
+            vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+
+            vkCmdBindIndexBuffer(commandBuffer, indices_buffers[index]->buffer, 0, VK_INDEX_TYPE_UINT16);
+
+            vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.pipeline_layout, 0, 1,
+                                    &descriptor_sets[vi][current_image_index], 0, nullptr);
+            vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(object.GetIndices().size()), 1, 0, 0, 0);
+        } else {
+
+            auto const &object = std::get<DrawObjectVector3>(obj);
+
+            VkBuffer vertexBuffers[] = {vertex_buffers[index]->buffer};
+            VkDeviceSize offsets[] = {0};
+
+            vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.graphics_pipeline);
+
+            vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+
+            vkCmdBindIndexBuffer(commandBuffer, indices_buffers[index]->buffer, 0, VK_INDEX_TYPE_UINT16);
+
+            vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.pipeline_layout, 0, 1,
+                                    &descriptor_sets[vi][current_image_index], 0, nullptr);
+            vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(object.GetIndices().size()), 1, 0, 0, 0);
+        }
+
         index++;
     }
 }
@@ -867,15 +1014,15 @@ void DrawModel::UpdateUniform2(VkCommandBuffer command_buffer, GlobalUbo &ubo) {
 void DrawModel::createDescriptorSet() {
     descriptorPool =
             DescriptorPool::Builder(context.GetContext().device)
-            .SetMaxSets(Swapchain::MAX_FRAMES_IN_FLIGHT)
+            .SetMaxSets(Swapchain::MAX_FRAMES_IN_FLIGHT * 3)
             .AddPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, Swapchain::MAX_FRAMES_IN_FLIGHT)
-            // .AddPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, Swapchain::MAX_FRAMES_IN_FLIGHT)
+            .AddPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, Swapchain::MAX_FRAMES_IN_FLIGHT)
             .Build();
 
     descriptorSetLayout =
             DescriptorSetLayout::Builder(context.GetContext().device)
             .AddBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS)
-            // .AddBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+            .AddBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
             .Build();
 
     descriptorSets.resize(Swapchain::MAX_FRAMES_IN_FLIGHT);

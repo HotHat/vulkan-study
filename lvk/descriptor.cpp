@@ -4,6 +4,9 @@
 
 #include "descriptor.h"
 
+#include <iostream>
+#include <ostream>
+
 namespace lvk {
 // *************** Descriptor Set Layout Builder *********************
 
@@ -112,7 +115,9 @@ bool DescriptorPool::AllocDescriptor(
 
     // Might want to create a "DescriptorPoolManager" class that handles this case, and builds
     // a new pool whenever an old pool fills up. But this is beyond our current scope
-    if (vkAllocateDescriptorSets(device.device, &allocInfo, &descriptor) != VK_SUCCESS) {
+    int32_t code = vkAllocateDescriptorSets(device.device, &allocInfo, &descriptor);
+    if (code != VK_SUCCESS) {
+        std::cout << "failed to allocate descriptor set! code: " << code << std::endl;
         return false;
     }
     return true;

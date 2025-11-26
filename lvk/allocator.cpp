@@ -82,7 +82,7 @@ std::unique_ptr<Image> Allocator::CreateImage(VkExtent2D extent, VkFormat format
     VmaAllocation allocation;
     vmaCreateImage(allocator, &imageInfo, &allocInfo, &textureImage, &allocation, nullptr);
 
-    return std::make_unique<Image>(context, allocator, textureImage, allocation);
+    return std::make_unique<Image>(allocator, textureImage, allocation);
 }
 
 void Allocator::Destroy() const {
