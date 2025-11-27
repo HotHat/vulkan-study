@@ -13,14 +13,13 @@
 #include "vulkan_context.h"
 
 namespace lvk {
-
 class Texture {
 public:
-    explicit Texture(RenderContext &context): context(context) {
+    explicit Texture(RenderContext &context) : context(context) {
         //
     }
 
-    Texture& operator=(Texture&& other) noexcept {
+    Texture &operator=(Texture &&other) noexcept {
         texture = std::move(other.texture);
         sampler = other.sampler;
         imageView = other.imageView;
@@ -49,9 +48,10 @@ public:
             throw std::runtime_error("failed to load texture image!");
         }
         auto texture_buffer = context.GetAllocator().CreateBuffer2(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                                                       VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
-                                                       VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT |
-                                                       VMA_ALLOCATION_CREATE_MAPPED_BIT);
+                                                                   VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
+                                                                   VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT
+                                                                   |
+                                                                   VMA_ALLOCATION_CREATE_MAPPED_BIT);
         texture_buffer->CopyData(imageSize, (void *) pixels);
         texture_buffer->Flush(0, imageSize);
         //
@@ -70,7 +70,8 @@ public:
         TransitionImageLayout(texture->image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED,
                               VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-        CopyBufferToImage(texture_buffer->buffer, texture->image, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
+        CopyBufferToImage(texture_buffer->buffer, texture->image, static_cast<uint32_t>(texWidth),
+                          static_cast<uint32_t>(texHeight));
 
         TransitionImageLayout(texture->image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                               VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
@@ -86,8 +87,7 @@ public:
     VkImageView GetImageView() { return imageView; }
 
     void TransitionImageLayout(VkImage image_, VkFormat format, VkImageLayout oldLayout,
-                                      VkImageLayout newLayout) {
-
+                               VkImageLayout newLayout) {
         VkCommandBuffer commandBuffer = context.BeginSingleTimeCommands();
 
         VkImageMemoryBarrier barrier{};
@@ -119,9 +119,9 @@ public:
 
             sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
             destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-                   } else {
-                       throw std::invalid_argument("unsupported layout transition!");
-                   }
+        } else {
+            throw std::invalid_argument("unsupported layout transition!");
+        }
 
         vkCmdPipelineBarrier(
             commandBuffer,
@@ -159,7 +159,9 @@ public:
     }
 
     void Destroy() const {
-        texture->Destroy();
+        if (texture) {
+            texture->Destroy();
+        }
         vkDestroySampler(context.GetContext().device.device, sampler, nullptr);
         vkDestroyImageView(context.GetContext().device.device, imageView, nullptr);
     }
@@ -213,7 +215,5 @@ private:
         }
     }
 };
-
-
 } // end namespace lvk
 #endif //LYH_TEXTURE_H

@@ -13,28 +13,178 @@
 #include "Vertex.h"
 
 namespace lvk {
+struct BaseDrawObject {
+    BaseDrawObject() = default;
+
+    BaseDrawObject(const BaseDrawObject &) = delete; // Delete copy constructor
+    BaseDrawObject &operator=(const BaseDrawObject &) = delete; // Delete copy assignment
+
+    BaseDrawObject(BaseDrawObject &&) = default; // Move constructor
+    BaseDrawObject &operator=(BaseDrawObject &&) = default; // Move assignment
+
+    BaseDrawObject &WithPipeline(VkPipeline pipeline) {
+        graphics_pipeline = pipeline;
+        return *this;
+    };
+
+    BaseDrawObject &WithPipelineLayout(VkPipelineLayout layout) {
+        pipeline_layout = layout;
+        return *this;
+    };
+
+    BaseDrawObject &WithTexture(std::unique_ptr<Texture> &p_texture) {
+        texture = std::move(p_texture);
+        return *this;
+    };
+
+    void AddTriangle(const Vertex2 &t1, const Vertex2 &t2, const Vertex2 &t3) {
+        uint32_t size = vertexes2.size();
+        vertexes2.emplace_back(t1);
+        vertexes2.emplace_back(t2);
+        vertexes2.emplace_back(t3);
+
+        indices.emplace_back(size);
+        indices.emplace_back(size + 1);
+        indices.emplace_back(size + 2);
+    };
+
+    void AddTriangle(const Vertex3 &t1, const Vertex3 &t2, const Vertex3 &t3) {
+        uint32_t size = vertexes3.size();
+        vertexes3.emplace_back(t1);
+        vertexes3.emplace_back(t2);
+        vertexes3.emplace_back(t3);
+
+        indices.emplace_back(size);
+        indices.emplace_back(size + 1);
+        indices.emplace_back(size + 2);
+    };
+
+
+    void AddRectangle(const Vertex2 &t1, const Vertex2 &t2, const Vertex2 &t3, const Vertex2 &t4) {
+        uint32_t size = vertexes2.size();
+        vertexes2.emplace_back(t1);
+        vertexes2.emplace_back(t2);
+        vertexes2.emplace_back(t3);
+        vertexes2.emplace_back(t4);
+
+        indices.emplace_back(size);
+        indices.emplace_back(size + 1);
+        indices.emplace_back(size + 2);
+        indices.emplace_back(size + 2);
+        indices.emplace_back(size + 3);
+        indices.emplace_back(size);
+    };
+
+    void AddRectangle(const Vertex3 &t1, const Vertex3 &t2, const Vertex3 &t3, const Vertex3 &t4) {
+        uint32_t size = vertexes3.size();
+        vertexes3.emplace_back(t1);
+        vertexes3.emplace_back(t2);
+        vertexes3.emplace_back(t3);
+        vertexes3.emplace_back(t4);
+
+        indices.emplace_back(size);
+        indices.emplace_back(size + 1);
+        indices.emplace_back(size + 2);
+        indices.emplace_back(size + 2);
+        indices.emplace_back(size + 3);
+        indices.emplace_back(size);
+    };
+
+    virtual ~BaseDrawObject() = default;
+
+
+    virtual const void *GetVertexData() const = 0;
+
+    virtual uint32_t GetVertexDataSize() const = 0;
+
+    const void *GetIndicesData() const {
+        assert(!indices.empty() && "indices is empty");
+        return indices.data();
+    };
+
+    uint32_t GetIndicesDataSize() const {
+        assert(!indices.empty() && "indices is empty");
+        return indices.size() * sizeof(uint16_t);
+    };
+
+    uint32_t GetIndicesSize() const { return indices.size(); };
+
+    bool HasTexture() const { return texture != nullptr; };
+
+    Texture &GetTexture() const { return *texture; };
+
+    VkPipeline GetPipeline() const { return graphics_pipeline; };
+
+    VkPipelineLayout GetPipelineLayout() const { return pipeline_layout; };
+
+    void Cleanup() const {
+        if (texture) {
+            texture->Destroy();
+        }
+    };
+
+protected:
+    VkPipeline graphics_pipeline{};
+    VkPipelineLayout pipeline_layout{};
+
+    std::vector<Vertex2> vertexes2{};
+    std::vector<Vertex3> vertexes3{};
+
+    std::vector<uint16_t> indices{};
+
+    // VkImageView view = VK_NULL_HANDLE;
+    std::unique_ptr<Texture> texture{};
+};
+
+class DrawObjectV2 : public BaseDrawObject {
+    const void *GetVertexData() const override {
+        assert(!vertexes2.empty() && "vertexes is empty");
+        return vertexes2.data();
+    };
+
+    uint32_t GetVertexDataSize() const override {
+        return vertexes2.size() * sizeof(Vertex2);
+    };
+
+};
+
+class DrawObjectV3 : public BaseDrawObject {
+    const void *GetVertexData() const override {
+        assert(!vertexes3.empty() && "vertexes is empty");
+        return vertexes3.data();
+    };
+
+    uint32_t GetVertexDataSize() const override {
+        return vertexes3.size() * sizeof(Vertex3);
+    };
+};
+
+/*
 template<typename T>
 class DrawObject {
 public:
-    DrawObject() = default;
+    // DrawObject() : BaseDrawObject() {
+    // };
 
-    // DrawObject &operator=(DrawObject &&other) noexcept {
-    //     vertexes = std::move(other.vertexes);
-    //     texture = std::move(other.texture);
-    //     indices = other.indices;
-    //     pipeline_layout = other.pipeline_layout;
-    //     graphics_pipeline = other.graphics_pipeline;
-    //
-    //     return *this;
-    // }
+    // ~DrawObject() override = default;
 
-    // DrawObject(DrawObject &&other) noexcept {
-    //     vertexes = std::move(other.vertexes);
-    //     texture = std::move(other.texture);
-    //     indices = other.indices;
-    //     pipeline_layout = other.pipeline_layout;
-    //     graphics_pipeline = other.graphics_pipeline;
-    // }
+    DrawObject &operator=(DrawObject &&other) noexcept {
+        vertexes = std::move(other.vertexes);
+        texture = std::move(other.texture);
+        indices = other.indices;
+        pipeline_layout = other.pipeline_layout;
+        graphics_pipeline = other.graphics_pipeline;
+
+        return *this;
+    }
+
+    DrawObject(DrawObject &&other) noexcept {
+        vertexes = std::move(other.vertexes);
+        texture = std::move(other.texture);
+        indices = other.indices;
+        pipeline_layout = other.pipeline_layout;
+        graphics_pipeline = other.graphics_pipeline;
+    }
 
     // void SetImageView();
     void AddTriangle(T t1, T t2, T t3) {
@@ -63,9 +213,25 @@ public:
         indices.emplace_back(size);
     };
 
-    [[nodiscard]] std::vector<T> GetVertexes() const { return vertexes; };
-    [[nodiscard]] std::vector<uint16_t> GetIndices() const { return indices; };
-    [[nodiscard]] Texture & GetTexture() const { return *texture; };
+    [[nodiscard]] const void *GetVertexData() const override {
+        assert(!vertexes.empty() && "vertexes is empty");
+        return vertexes.data();
+    };
+    [[nodiscard]] uint32_t GetVertexDataSize() const override { return vertexes.size() * sizeof(T); };
+
+    [[nodiscard]] const void *GetIndices() const {
+        assert(!vertexes.empty() && "indices is empty");
+        return indices.data();
+    };
+
+    [[nodiscard]] uint32_t GetIndicesDataSize() const override { return indices.size() * sizeof(uint16_t); };
+    [[nodiscard]] uint32_t GetIndicesSize() const override { return indices.size(); };
+
+    [[nodiscard]] bool HasTexture() const override { return texture != nullptr; };
+    [[nodiscard]] Texture &GetTexture() const override { return *texture; };
+    [[nodiscard]] VkPipeline GetPipeline() const override { return graphics_pipeline; }
+
+    [[nodiscard]] VkPipelineLayout GetPipelineLayout() const override { return pipeline_layout; }
 
     DrawObject &WithPipeline(VkPipeline pipeline) {
         graphics_pipeline = pipeline;
@@ -81,6 +247,12 @@ public:
         texture = std::move(p_texture);
         return *this;
     };
+
+    void Cleanup() const {
+        if (texture) {
+            texture->Destroy();
+        }
+    }
 
     VkPipeline graphics_pipeline{};
     VkPipelineLayout pipeline_layout{};
@@ -98,7 +270,7 @@ using DrawObjectVector2 = DrawObject<Vertex2>;
 using DrawObjectVector3 = DrawObject<Vertex3>;
 
 using DrawObjectType = std::variant<DrawObjectVector2, DrawObjectVector3>;
-
+*/
 } // end namespace lvk
 
 // #include "draw_object.cpp"

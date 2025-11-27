@@ -120,9 +120,16 @@ int device_initialization(Init &init) {
     init.model->DrawRectangle({400.0f, 100.0f}, {100.0f, 100.0f}, {1.0f, 0.0f, 0.0f});
 
     // init.model->AddDrawObject();
-    init.model->AddDrawTextureObject();
-    // init.model->DrawTriangle({150.0f, 250.0f}, {200.0f, 350.0f}, {100.0f, 350.0f}, {1.0f, 0.0f, 0.0f});
-    init.model->DrawRectangleUv({250.0f, 350.0f}, {100.0f, 100.0f}, {0.0f, 1.0f, 1.0f});
+    // image 1
+    init.model->AddDrawTextureObject("../textures/texture.jpg");
+    init.model->DrawRectangleUv({100.0f, 250.0f}, {100.0f, 100.0f}, {0.0f, 1.0f, 1.0f});
+    init.model->DrawRectangleUv({250.0f, 250.0f}, {100.0f, 100.0f}, {0.0f, 1.0f, 1.0f});
+    init.model->DrawRectangleUv({400.0f, 250.0f}, {100.0f, 100.0f}, {0.0f, 1.0f, 1.0f});
+    // image 2
+    init.model->AddDrawTextureObject("../textures/vulkan.png");
+    init.model->DrawRectangleUv({100.0f, 400.0f}, {100.0f, 100.0f}, {0.0f, 1.0f, 1.0f});
+    init.model->DrawRectangleUv({250.0f, 400.0f}, {100.0f, 100.0f}, {0.0f, 1.0f, 1.0f});
+    init.model->DrawRectangleUv({400.0f, 400.0f}, {100.0f, 100.0f}, {0.0f, 1.0f, 1.0f});
 
     init.model->LoadVertex();
     //

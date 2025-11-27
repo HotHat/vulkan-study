@@ -80,28 +80,29 @@ void DrawModel::load2() {
 void DrawModel::AddDrawObject() {
     CreateGraphicsPipeline2();
 
-    DrawObjectVector2 draw_object = DrawObject<Vertex2>();
+    auto draw_object = DrawObjectV2();
     // auto obj = static_cast<DrawObjectVector2>(draw_object);
     draw_object
             .WithPipeline(graphics_pipeline)
             .WithPipelineLayout(pipeline_layout);
 
-    draw_objects.emplace_back(std::move(draw_object));
+    draw_objects.emplace_back(std::make_unique<DrawObjectV2>(std::move(draw_object)));
 }
 
-void DrawModel::AddDrawTextureObject() {
+void DrawModel::AddDrawTextureObject(const std::string &image_path) {
     CreateGraphicsPipeline3("../shaders/textures.vert.spv", "../shaders/textures.frag.spv");
 
     auto texture = std::make_unique<Texture>(context);
-    texture->LoadImage("textures/texture.jpg");
+    // texture->LoadImage("textures/texture.jpg");
+    texture->LoadImage(image_path);
 
-    auto draw_object = DrawObjectVector3{};
+    auto draw_object = DrawObjectV3{};
     draw_object
             .WithPipeline(graphics_pipeline)
             .WithPipelineLayout(pipeline_layout)
             .WithTexture(texture);
 
-    draw_objects.emplace_back(std::move(draw_object));
+    draw_objects.emplace_back(std::make_unique<DrawObjectV3>(std::move(draw_object)));
 }
 
 void DrawModel::LoadVertex() {
@@ -117,7 +118,56 @@ void DrawModel::LoadVertex() {
     }
 
     int32_t index = 0;
-    for (auto const &obj: draw_objects) {
+    for (auto const &object: draw_objects) {
+        uint32_t vertice_size = object->GetVertexDataSize();
+        uint32_t indices_size = object->GetIndicesDataSize();
+
+        vertex_buffers[index] = context.GetAllocator().CreateBuffer(vertice_size,
+                                                                    VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
+                                                                    VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                                                                    VMA_MEMORY_USAGE_CPU_TO_GPU);
+        indices_buffers[index] = context.GetAllocator().CreateBuffer(indices_size,
+                                                                     VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
+                                                                     VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                                                                     VMA_MEMORY_USAGE_CPU_TO_GPU);
+
+        //
+        vertex_buffers[index]->CopyData(vertice_size, const_cast<void *>(object->GetVertexData()));
+        vertex_buffers[index]->Flush(0, vertice_size);
+
+        indices_buffers[index]->CopyData(indices_size, const_cast<void *>(object->GetIndicesData()));
+        indices_buffers[index]->Flush(0, indices_size);
+
+        descriptor_sets[index].resize(descriptorSets.size());
+
+        for (int i = 0; i < descriptorSets.size(); i++) {
+            auto bufferInfo = VkDescriptorBufferInfo{
+                ubo_buffers[i]->buffer,
+                0,
+                VK_WHOLE_SIZE
+                // ubo_buffers[i]->size,
+                // range
+            };
+
+            auto writer = DescriptorWriter(*descriptorSetLayout, *descriptorPool)
+                    .WriteBuffer(0, &bufferInfo);
+
+            if (object->HasTexture()) {
+                auto &texture = object->GetTexture();
+                auto textureInfo = VkDescriptorImageInfo{
+                    texture.GetSampler(),
+                    texture.GetImageView(),
+                };
+
+                textureInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                writer.WriteImage(1, &textureInfo);
+            }
+            writer.Build(descriptor_sets[index][i]);
+        }
+
+        index++;
+
+        /*
         auto vi = obj.index();
 
         if (vi == 0) {
@@ -224,7 +274,6 @@ void DrawModel::LoadVertex() {
         //
 
 
-        /*
         descriptor_sets[vi].resize(Swapchain::MAX_FRAMES_IN_FLIGHT);
         if (vi == 0) {
             for (int i = 0; i < descriptorSets.size(); i++) {
@@ -253,7 +302,6 @@ void DrawModel::LoadVertex() {
         */
 
 
-        index++;
     }
 
 
@@ -456,19 +504,20 @@ void DrawModel::Destroy() {
     descriptorPool->Cleanup();
     descriptorSetLayout->Cleanup();
 
-    for (auto const &obj: draw_objects) {
-        auto &object = std::get<DrawObjectVector2>(obj);
-        vkDestroyPipeline(context.GetContext().device.device, object.graphics_pipeline, nullptr);
-        vkDestroyPipelineLayout(context.GetContext().device.device, object.pipeline_layout, nullptr);
+    vkDeviceWaitIdle(context.GetContext().device.device);
+    for (auto const &object: draw_objects) {
+        object->Cleanup();
+        vkDestroyPipeline(context.GetContext().device.device, object->GetPipeline(), nullptr);
+        vkDestroyPipelineLayout(context.GetContext().device.device, object->GetPipelineLayout(), nullptr);
     }
 }
 
 void DrawModel::DrawTriangle(glm::vec2 p1, glm::vec2 p2, glm::vec2 p3, glm::vec3 color) {
     auto &top = draw_objects.back();
 
-    auto &obj = std::get<DrawObjectVector2>(top);
+    // auto &object = dynamic_cast<DrawObjectVector2 &>(*top);
 
-    obj.AddTriangle(
+    top->AddTriangle(
         Vertex2(glm::vec3(p1.x, p1.y, 0.0f), color),
         Vertex2(glm::vec3(p2.x, p2.y, 0.0f), color),
         Vertex2(glm::vec3(p3.x, p3.y, 0.0f), color)
@@ -478,9 +527,7 @@ void DrawModel::DrawTriangle(glm::vec2 p1, glm::vec2 p2, glm::vec2 p3, glm::vec3
 void DrawModel::DrawRectangle(glm::vec2 pos, glm::vec2 size, glm::vec3 color) {
     auto &top = draw_objects.back();
 
-    auto &obj = std::get<DrawObjectVector2>(top);
-
-    obj.AddRectangle(
+    top->AddRectangle(
         Vertex2(glm::vec3(pos.x, pos.y, 0.0f), color),
         Vertex2(glm::vec3(pos.x + size.x, pos.y, 0.0f), color),
         Vertex2(glm::vec3(pos.x + size.x, pos.y + size.y, 0.0f), color),
@@ -491,9 +538,9 @@ void DrawModel::DrawRectangle(glm::vec2 pos, glm::vec2 size, glm::vec3 color) {
 void DrawModel::DrawRectangleUv(glm::vec2 pos, glm::vec2 size, glm::vec3 color) {
     auto &top = draw_objects.back();
 
-    auto &obj = std::get<DrawObjectVector3>(top);
+    // auto &object = reinterpret_cast<DrawObjectVector3 &>(top);
 
-    obj.AddRectangle(
+    top->AddRectangle(
         Vertex3(glm::vec3(pos.x, pos.y, 0.0f), color, {1.0f, 0.0f}),
         Vertex3(glm::vec3(pos.x + size.x, pos.y, 0.0f), color, {0.0f, 0.0f}),
         Vertex3(glm::vec3(pos.x + size.x, pos.y + size.y, 0.0f), color, {0.0f, 1.0f}),
@@ -510,41 +557,19 @@ void DrawModel::Draw() {
     auto commandBuffer = context.GetCurrentCommandBuffer();
 
     auto index = 0;
-    for (auto const &obj: draw_objects) {
-        auto vi = obj.index();
+    for (auto const &object: draw_objects) {
+        VkBuffer vertexBuffers[] = {vertex_buffers[index]->buffer};
+        VkDeviceSize offsets[] = {0};
 
-        if (vi == 0) {
-            auto const &object = std::get<DrawObjectVector2>(obj);
+        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object->GetPipeline());
 
-            VkBuffer vertexBuffers[] = {vertex_buffers[index]->buffer};
-            VkDeviceSize offsets[] = {0};
+        vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
 
-            vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.graphics_pipeline);
+        vkCmdBindIndexBuffer(commandBuffer, indices_buffers[index]->buffer, 0, VK_INDEX_TYPE_UINT16);
 
-            vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-
-            vkCmdBindIndexBuffer(commandBuffer, indices_buffers[index]->buffer, 0, VK_INDEX_TYPE_UINT16);
-
-            vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.pipeline_layout, 0, 1,
-                                    &descriptor_sets[vi][current_image_index], 0, nullptr);
-            vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(object.GetIndices().size()), 1, 0, 0, 0);
-        } else {
-
-            auto const &object = std::get<DrawObjectVector3>(obj);
-
-            VkBuffer vertexBuffers[] = {vertex_buffers[index]->buffer};
-            VkDeviceSize offsets[] = {0};
-
-            vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.graphics_pipeline);
-
-            vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-
-            vkCmdBindIndexBuffer(commandBuffer, indices_buffers[index]->buffer, 0, VK_INDEX_TYPE_UINT16);
-
-            vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.pipeline_layout, 0, 1,
-                                    &descriptor_sets[vi][current_image_index], 0, nullptr);
-            vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(object.GetIndices().size()), 1, 0, 0, 0);
-        }
+        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object->GetPipelineLayout(), 0, 1,
+                                &descriptor_sets[index][current_image_index], 0, nullptr);
+        vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(object->GetIndicesSize()), 1, 0, 0, 0);
 
         index++;
     }
@@ -1014,9 +1039,9 @@ void DrawModel::UpdateUniform2(VkCommandBuffer command_buffer, GlobalUbo &ubo) {
 void DrawModel::createDescriptorSet() {
     descriptorPool =
             DescriptorPool::Builder(context.GetContext().device)
-            .SetMaxSets(Swapchain::MAX_FRAMES_IN_FLIGHT * 3)
-            .AddPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, Swapchain::MAX_FRAMES_IN_FLIGHT)
-            .AddPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, Swapchain::MAX_FRAMES_IN_FLIGHT)
+            .SetMaxSets(Swapchain::MAX_FRAMES_IN_FLIGHT * 6)
+            .AddPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, Swapchain::MAX_FRAMES_IN_FLIGHT * 3)
+            .AddPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, Swapchain::MAX_FRAMES_IN_FLIGHT * 3)
             .Build();
 
     descriptorSetLayout =

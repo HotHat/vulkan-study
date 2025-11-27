@@ -31,7 +31,7 @@ public:
 
     void AddDrawObject();
 
-    void AddDrawTextureObject();
+    void AddDrawTextureObject(const std::string &image_path);
 
     void LoadVertex();
 
@@ -81,7 +81,7 @@ private:
     // std::vector<Vertex> vertices{};
     // std::vector<uint16_t> indices{};
 
-    std::vector<DrawObjectType> draw_objects{};
+    std::vector<std::unique_ptr<BaseDrawObject>> draw_objects{};
 
     GlobalUbo globalUbo{};
 
