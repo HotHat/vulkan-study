@@ -526,11 +526,12 @@ void DrawModel::Destroy() {
 
 
     descriptorPool->Cleanup();
-    descriptorSetLayout->Cleanup();
+    // descriptorSetLayout->Cleanup();
 
     vkDeviceWaitIdle(context.GetContext().device.device);
     for (auto const &object: draw_objects) {
         object->Cleanup();
+        object->GetDescriptorSetLayout().Cleanup();
         vkDestroyPipeline(context.GetContext().device.device, object->GetPipeline(), nullptr);
         vkDestroyPipelineLayout(context.GetContext().device.device, object->GetPipelineLayout(), nullptr);
     }
