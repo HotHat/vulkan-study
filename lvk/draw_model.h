@@ -25,21 +25,13 @@ class DrawModel {
 public:
     explicit DrawModel(RenderContext &context);
 
-    void load();
-
-    void load2();
-
     void AddDrawObject();
 
     void AddDrawTextureObject(const std::string &image_path);
 
     void LoadVertex();
 
-    void LoadImage();
-
-    void CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
-
-    void TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
+    // void LoadImage();
 
     void Destroy();
 
@@ -48,14 +40,6 @@ public:
     void DrawRectangleUv(glm::vec2 pos, glm::vec2 size, glm::vec3 color);
 
     void Draw();
-
-    void create_render_pass();
-
-    void CreateGraphicsPipeline();
-
-    void CreateGraphicsPipeline2();
-
-    void CreateGraphicsPipeline3(const std::string &vert_file, const std::string &frag_file);
 
     void UpdateUniform(GlobalUbo &ubo);
 
@@ -66,15 +50,9 @@ public:
     RenderContext &context;
 
 
-    VkRenderPass render_pass{};
-    VkPipeline pipeline{};
-    VkPipelineLayout pipeline_layout{};
-    VkPipeline graphics_pipeline{};
-
 private:
     void createDescriptorSet();
 
-    std::unique_ptr<DescriptorSetLayout> descriptorSetLayout;
     std::unique_ptr<DescriptorPool> descriptorPool;
     std::vector<VkDescriptorSet> descriptorSets;
 

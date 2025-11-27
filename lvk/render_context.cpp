@@ -506,7 +506,7 @@ void RenderContext::EndSingleTimeCommands(VkCommandBuffer commandBuffer) {
 
     vkQueueSubmit(graphics_queue, 1, &submitInfo, single_fence);
     // vkQueueWaitIdle(graphics_queue);
-    vkWaitForFences(context.device.device, 1, &single_fence, VK_TRUE, 1000000);
+    vkWaitForFences(context.device.device, 1, &single_fence, VK_TRUE, UINT64_MAX);
     vkDestroyFence(context.device.device, single_fence, nullptr);
 
     vkFreeCommandBuffers(context.device.device, command_pool, 1, &commandBuffer);
