@@ -40,6 +40,8 @@ set(LVK_FILES
 set(PROJECT_FILES
         ${LVK_FILES}
         Texture.h
+        pipeline.cpp
+        pipeline.h
 )
 
 #NB: switch this to shared library and things stop working. (there is likely two copies of volk somewhere.

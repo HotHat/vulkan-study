@@ -78,31 +78,57 @@ void DrawModel::load2() {
 }
 
 void DrawModel::AddDrawObject() {
-    CreateGraphicsPipeline2();
+    // CreateGraphicsPipeline2();
+    auto setLayout = DescriptorSetLayout::Builder(context.GetContext().device)
+                .AddBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS)
+                // .AddBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+                .Build();
 
-    auto draw_object = DrawObjectV2();
+    auto pipeline_ = Pipeline::Builder(context.GetContext())
+            .withShader("../shaders/ubo.vert.spv", "../shaders/ubo.frag.spv")
+            .withBindingDescription({
+                .binding = 0,
+                .stride = sizeof(Vertex2),
+                .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
+            })
+            .withVertexDescriptions(Vertex2::GetAttributeDescriptions())
+            .withDescriptorSetLayout(setLayout)
+            .build();
+
+    auto draw_object = BaseDrawObject(pipeline_);
     // auto obj = static_cast<DrawObjectVector2>(draw_object);
-    draw_object
-            .WithPipeline(graphics_pipeline)
-            .WithPipelineLayout(pipeline_layout);
+    // draw_object.WithPipeline(pipeline_);
+            // .WithPipelineLayout(pipeline_layout);
 
-    draw_objects.emplace_back(std::make_unique<DrawObjectV2>(std::move(draw_object)));
+    draw_objects.emplace_back(std::make_unique<BaseDrawObject>(std::move(draw_object)));
 }
 
 void DrawModel::AddDrawTextureObject(const std::string &image_path) {
-    CreateGraphicsPipeline3("../shaders/textures.vert.spv", "../shaders/textures.frag.spv");
+    // CreateGraphicsPipeline3("../shaders/textures.vert.spv", "../shaders/textures.frag.spv");
 
     auto texture = std::make_unique<Texture>(context);
     // texture->LoadImage("textures/texture.jpg");
     texture->LoadImage(image_path);
 
-    auto draw_object = DrawObjectV3{};
-    draw_object
-            .WithPipeline(graphics_pipeline)
-            .WithPipelineLayout(pipeline_layout)
-            .WithTexture(texture);
+    auto setLayout = DescriptorSetLayout::Builder(context.GetContext().device)
+                .AddBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS)
+                .AddBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+                .Build();
 
-    draw_objects.emplace_back(std::make_unique<DrawObjectV3>(std::move(draw_object)));
+    auto pipeline_ = Pipeline::Builder(context.GetContext())
+            .withShader("../shaders/textures.vert.spv", "../shaders/textures.frag.spv")
+            .withBindingDescription({
+                .binding = 0,
+                .stride = sizeof(Vertex3),
+                .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
+            })
+            .withVertexDescriptions(Vertex3::GetAttributeDescriptions())
+            .withDescriptorSetLayout(setLayout)
+            .build();
+
+    auto draw_object = std::move(BaseDrawObject(pipeline_).WithTexture(texture));
+
+    draw_objects.emplace_back(std::make_unique<BaseDrawObject>(std::move(draw_object)));
 }
 
 void DrawModel::LoadVertex() {
@@ -138,9 +164,9 @@ void DrawModel::LoadVertex() {
         indices_buffers[index]->CopyData(indices_size, const_cast<void *>(object->GetIndicesData()));
         indices_buffers[index]->Flush(0, indices_size);
 
-        descriptor_sets[index].resize(descriptorSets.size());
+        descriptor_sets[index].resize(Swapchain::MAX_FRAMES_IN_FLIGHT);
 
-        for (int i = 0; i < descriptorSets.size(); i++) {
+        for (int i = 0; i < Swapchain::MAX_FRAMES_IN_FLIGHT; i++) {
             auto bufferInfo = VkDescriptorBufferInfo{
                 ubo_buffers[i]->buffer,
                 0,
@@ -149,7 +175,7 @@ void DrawModel::LoadVertex() {
                 // range
             };
 
-            auto writer = DescriptorWriter(*descriptorSetLayout, *descriptorPool)
+            auto writer = DescriptorWriter(object->GetDescriptorSetLayout(), *descriptorPool)
                     .WriteBuffer(0, &bufferInfo);
 
             if (object->HasTexture()) {
@@ -300,8 +326,6 @@ void DrawModel::LoadVertex() {
         } else {
         }
         */
-
-
     }
 
 
@@ -517,21 +541,21 @@ void DrawModel::DrawTriangle(glm::vec2 p1, glm::vec2 p2, glm::vec2 p3, glm::vec3
 
     // auto &object = dynamic_cast<DrawObjectVector2 &>(*top);
 
-    top->AddTriangle(
-        Vertex2(glm::vec3(p1.x, p1.y, 0.0f), color),
-        Vertex2(glm::vec3(p2.x, p2.y, 0.0f), color),
-        Vertex2(glm::vec3(p3.x, p3.y, 0.0f), color)
+    top->AddTriangle<Vertex2>(
+        Vertex2(vec3(p1.x, p1.y, 0.0f), color),
+        Vertex2(vec3(p2.x, p2.y, 0.0f), color),
+        Vertex2(vec3(p3.x, p3.y, 0.0f), color)
     );
 }
 
 void DrawModel::DrawRectangle(glm::vec2 pos, glm::vec2 size, glm::vec3 color) {
     auto &top = draw_objects.back();
 
-    top->AddRectangle(
-        Vertex2(glm::vec3(pos.x, pos.y, 0.0f), color),
-        Vertex2(glm::vec3(pos.x + size.x, pos.y, 0.0f), color),
-        Vertex2(glm::vec3(pos.x + size.x, pos.y + size.y, 0.0f), color),
-        Vertex2(glm::vec3(pos.x, pos.y + size.y, 0.0f), color)
+    top->AddRectangle<Vertex2>(
+        Vertex2(vec3(pos.x, pos.y, 0.0f), color),
+        Vertex2(vec3(pos.x + size.x, pos.y, 0.0f), color),
+        Vertex2(vec3(pos.x + size.x, pos.y + size.y, 0.0f), color),
+        Vertex2(vec3(pos.x, pos.y + size.y, 0.0f), color)
     );
 }
 
@@ -540,11 +564,11 @@ void DrawModel::DrawRectangleUv(glm::vec2 pos, glm::vec2 size, glm::vec3 color) 
 
     // auto &object = reinterpret_cast<DrawObjectVector3 &>(top);
 
-    top->AddRectangle(
-        Vertex3(glm::vec3(pos.x, pos.y, 0.0f), color, {1.0f, 0.0f}),
-        Vertex3(glm::vec3(pos.x + size.x, pos.y, 0.0f), color, {0.0f, 0.0f}),
-        Vertex3(glm::vec3(pos.x + size.x, pos.y + size.y, 0.0f), color, {0.0f, 1.0f}),
-        Vertex3(glm::vec3(pos.x, pos.y + size.y, 0.0f), color, {1.0f, 1.0f})
+    top->AddRectangle<Vertex3>(
+        Vertex3(vec3(pos.x, pos.y, 0.0f), color, {1.0f, 0.0f}),
+        Vertex3(vec3(pos.x + size.x, pos.y, 0.0f), color, {0.0f, 0.0f}),
+        Vertex3(vec3(pos.x + size.x, pos.y + size.y, 0.0f), color, {0.0f, 1.0f}),
+        Vertex3(vec3(pos.x, pos.y + size.y, 0.0f), color, {1.0f, 1.0f})
     );
 }
 
@@ -1044,13 +1068,13 @@ void DrawModel::createDescriptorSet() {
             .AddPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, Swapchain::MAX_FRAMES_IN_FLIGHT * 3)
             .Build();
 
-    descriptorSetLayout =
-            DescriptorSetLayout::Builder(context.GetContext().device)
-            .AddBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS)
-            .AddBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
-            .Build();
+    // descriptorSetLayout =
+            // DescriptorSetLayout::Builder(context.GetContext().device)
+            // .AddBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS)
+            // .AddBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+            // .Build();
 
-    descriptorSets.resize(Swapchain::MAX_FRAMES_IN_FLIGHT);
+    // descriptorSets.resize(Swapchain::MAX_FRAMES_IN_FLIGHT);
 }
 
 void DrawModel::create_render_pass() {

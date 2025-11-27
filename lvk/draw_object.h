@@ -9,78 +9,85 @@
 #include <glm/vec3.hpp>
 
 #include "image.h"
+#include "pipeline.h"
 #include "Texture.h"
 #include "Vertex.h"
 
 namespace lvk {
 struct BaseDrawObject {
-    BaseDrawObject() = default;
+    BaseDrawObject(Pipeline &pipeline_) : pipeline(std::move(pipeline_)) {
+    };
 
     BaseDrawObject(const BaseDrawObject &) = delete; // Delete copy constructor
     BaseDrawObject &operator=(const BaseDrawObject &) = delete; // Delete copy assignment
 
-    BaseDrawObject(BaseDrawObject &&) = default; // Move constructor
-    BaseDrawObject &operator=(BaseDrawObject &&) = default; // Move assignment
+    // Move constructor
+    BaseDrawObject(BaseDrawObject &&other) noexcept {
+        pipeline = std::move(other.pipeline);
+        //
+        vertexes = std::move(other.vertexes);
+        vertexesSize = other.vertexesSize;
+        indices = std::move(other.indices);
+        texture = std::move(other.texture);
+    }
 
-    BaseDrawObject &WithPipeline(VkPipeline pipeline) {
-        graphics_pipeline = pipeline;
+    // Move assignment
+    BaseDrawObject &operator=(BaseDrawObject && other) {
+        pipeline = std::move(other.pipeline);
+        //
+        vertexes = std::move(other.vertexes);
+        vertexesSize = other.vertexesSize;
+        indices = std::move(other.indices);
+        texture = std::move(other.texture);
+
+        return *this;
+    }
+
+    BaseDrawObject &WithPipeline(Pipeline &pipeline_) {
+        pipeline = std::move(pipeline_);
         return *this;
     };
 
-    BaseDrawObject &WithPipelineLayout(VkPipelineLayout layout) {
-        pipeline_layout = layout;
-        return *this;
-    };
+    // BaseDrawObject &WithPipelineLayout(VkPipelineLayout layout) {
+    // pipeline_layout = layout;
+    // return *this;
+    // };
 
     BaseDrawObject &WithTexture(std::unique_ptr<Texture> &p_texture) {
         texture = std::move(p_texture);
         return *this;
     };
 
-    void AddTriangle(const Vertex2 &t1, const Vertex2 &t2, const Vertex2 &t3) {
-        uint32_t size = vertexes2.size();
-        vertexes2.emplace_back(t1);
-        vertexes2.emplace_back(t2);
-        vertexes2.emplace_back(t3);
+    template<typename T>
+    void AddTriangle(const T &t1, const T &t2, const T &t3) {
+        auto sz = sizeof(T);
+        auto vs = vertexes.size();
+        vertexes.resize(vs + sz * 4);
+        uint32_t size = vertexesSize;
+
+        std::memcpy(vertexes.data() + vs, &t1, sz);
+        std::memcpy(vertexes.data() + vs + sz, &t2, sz);
+        std::memcpy(vertexes.data() + vs + sz * 2, &t3, sz);
+        vertexesSize += 3;
 
         indices.emplace_back(size);
         indices.emplace_back(size + 1);
         indices.emplace_back(size + 2);
     };
 
-    void AddTriangle(const Vertex3 &t1, const Vertex3 &t2, const Vertex3 &t3) {
-        uint32_t size = vertexes3.size();
-        vertexes3.emplace_back(t1);
-        vertexes3.emplace_back(t2);
-        vertexes3.emplace_back(t3);
 
-        indices.emplace_back(size);
-        indices.emplace_back(size + 1);
-        indices.emplace_back(size + 2);
-    };
+    template<typename T>
+    void AddRectangle(const T &t1, const T &t2, const T &t3, const T &t4) {
+        auto sz = sizeof(T);
+        auto vs = vertexes.size();
+        vertexes.resize(vs + sz * 4);
+        uint32_t size = vertexesSize;
 
-
-    void AddRectangle(const Vertex2 &t1, const Vertex2 &t2, const Vertex2 &t3, const Vertex2 &t4) {
-        uint32_t size = vertexes2.size();
-        vertexes2.emplace_back(t1);
-        vertexes2.emplace_back(t2);
-        vertexes2.emplace_back(t3);
-        vertexes2.emplace_back(t4);
-
-        indices.emplace_back(size);
-        indices.emplace_back(size + 1);
-        indices.emplace_back(size + 2);
-        indices.emplace_back(size + 2);
-        indices.emplace_back(size + 3);
-        indices.emplace_back(size);
-    };
-
-    void AddRectangle(const Vertex3 &t1, const Vertex3 &t2, const Vertex3 &t3, const Vertex3 &t4) {
-        uint32_t size = vertexes3.size();
-        vertexes3.emplace_back(t1);
-        vertexes3.emplace_back(t2);
-        vertexes3.emplace_back(t3);
-        vertexes3.emplace_back(t4);
+        std::memcpy(vertexes.data() + vs, &t1, sz);
+        std::memcpy(vertexes.data() + vs + sz, &t2, sz);
+        std::memcpy(vertexes.data() + vs + sz * 2, &t3, sz);
+        std::memcpy(vertexes.data() + vs + sz * 3, &t4, sz);
+        vertexesSize += 4;
 
         indices.emplace_back(size);
         indices.emplace_back(size + 1);
@@ -88,14 +95,18 @@ struct BaseDrawObject {
         indices.emplace_back(size + 2);
         indices.emplace_back(size + 3);
         indices.emplace_back(size);
-    };
+    }
 
     virtual ~BaseDrawObject() = default;
 
 
-    virtual const void *GetVertexData() const = 0;
+    const void *GetVertexData() const {
+        return vertexes.data();
+    };
 
-    virtual uint32_t GetVertexDataSize() const = 0;
+    uint32_t GetVertexDataSize() {
+        return vertexes.size();
+    };
 
     const void *GetIndicesData() const {
         assert(!indices.empty() && "indices is empty");
@@ -113,9 +124,10 @@ struct BaseDrawObject {
 
     Texture &GetTexture() const { return *texture; };
 
-    VkPipeline GetPipeline() const { return graphics_pipeline; };
+    VkPipeline GetPipeline() const { return pipeline.graphicsPipeline; };
+    DescriptorSetLayout &GetDescriptorSetLayout() const { return *pipeline.descriptorSetLayout; };
 
-    VkPipelineLayout GetPipelineLayout() const { return pipeline_layout; };
+    VkPipelineLayout GetPipelineLayout() const { return pipeline.pipelineLayout; };
 
     void Cleanup() const {
         if (texture) {
@@ -124,8 +136,15 @@ struct BaseDrawObject {
     };
 
 protected:
-    VkPipeline graphics_pipeline{};
-    VkPipelineLayout pipeline_layout{};
+    // VkPipeline graphics_pipeline{};
+    // VkPipelineLayout pipeline_layout{};
+
+    //
+    Pipeline pipeline{};
+
+    //
+    std::vector<uint8_t> vertexes{};
+    uint32_t vertexesSize = 0;
 
     std::vector<Vertex2> vertexes2{};
     std::vector<Vertex3> vertexes3{};
@@ -136,6 +155,7 @@ protected:
     std::unique_ptr<Texture> texture{};
 };
 
+/*
 class DrawObjectV2 : public BaseDrawObject {
     const void *GetVertexData() const override {
         assert(!vertexes2.empty() && "vertexes is empty");
@@ -159,7 +179,6 @@ class DrawObjectV3 : public BaseDrawObject {
     };
 };
 
-/*
 template<typename T>
 class DrawObject {
 public:
