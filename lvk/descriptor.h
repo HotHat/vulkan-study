@@ -17,7 +17,7 @@ class DescriptorSetLayout {
 public:
     class Builder {
     public:
-        Builder(Device &device) : device{device} {
+        explicit Builder(Device &device) : device{device} {
         }
 
         Builder &AddBinding(
@@ -26,7 +26,7 @@ public:
             VkShaderStageFlags stageFlags,
             uint32_t count = 1);
 
-        std::unique_ptr<DescriptorSetLayout> Build() const;
+        [[nodiscard]] std::unique_ptr<DescriptorSetLayout> Build() const;
 
     private:
         Device &device;

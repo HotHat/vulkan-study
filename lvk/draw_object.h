@@ -10,12 +10,13 @@
 
 #include "image.h"
 #include "pipeline.h"
+#include "pipeline_manager.h"
 #include "Texture.h"
 #include "Vertex.h"
 
 namespace lvk {
 struct BaseDrawObject {
-    BaseDrawObject(Pipeline &pipeline_) : pipeline(std::move(pipeline_)) {
+    explicit BaseDrawObject(ShaderId shaderId) : shaderId(shaderId) {
     };
 
     BaseDrawObject(const BaseDrawObject &) = delete; // Delete copy constructor
@@ -23,7 +24,6 @@ struct BaseDrawObject {
 
     // Move constructor
     BaseDrawObject(BaseDrawObject &&other) noexcept {
-        pipeline = std::move(other.pipeline);
         //
         vertexes = std::move(other.vertexes);
         vertexesSize = other.vertexesSize;
@@ -32,8 +32,7 @@ struct BaseDrawObject {
     }
 
     // Move assignment
-    BaseDrawObject &operator=(BaseDrawObject && other) {
-        pipeline = std::move(other.pipeline);
+    BaseDrawObject &operator=(BaseDrawObject &&other) {
         //
         vertexes = std::move(other.vertexes);
         vertexesSize = other.vertexesSize;
@@ -43,10 +42,10 @@ struct BaseDrawObject {
         return *this;
     }
 
-    BaseDrawObject &WithPipeline(Pipeline &pipeline_) {
-        pipeline = std::move(pipeline_);
-        return *this;
-    };
+    // BaseDrawObject &WithPipeline(Pipeline &pipeline_) {
+        // pipeline = std::move(pipeline_);
+        // return *this;
+    // };
 
     // BaseDrawObject &WithPipelineLayout(VkPipelineLayout layout) {
     // pipeline_layout = layout;
@@ -124,10 +123,21 @@ struct BaseDrawObject {
 
     Texture &GetTexture() const { return *texture; };
 
-    VkPipeline GetPipeline() const { return pipeline.graphicsPipeline; };
-    DescriptorSetLayout &GetDescriptorSetLayout() const { return *pipeline.descriptorSetLayout; };
+    VkPipeline GetPipeline() const {
+        auto &manage = PipelineManage::Instance();
+        auto &pipeline = manage.Get(shaderId);
+        return pipeline.graphicsPipeline;
+    };
 
-    VkPipelineLayout GetPipelineLayout() const { return pipeline.pipelineLayout; };
+    DescriptorSetLayout &GetDescriptorSetLayout() const {
+        auto &pipeline = PipelineManage::Instance().Get(shaderId);
+        return *pipeline.descriptorSetLayout;
+    };
+
+    VkPipelineLayout GetPipelineLayout() const {
+        auto &pipeline = PipelineManage::Instance().Get(shaderId);
+        return pipeline.pipelineLayout;
+    };
 
     void Cleanup() const {
         if (texture) {
@@ -140,7 +150,8 @@ protected:
     // VkPipelineLayout pipeline_layout{};
 
     //
-    Pipeline pipeline{};
+    // Pipeline pipeline{};
+    ShaderId shaderId{};
 
     //
     std::vector<uint8_t> vertexes{};

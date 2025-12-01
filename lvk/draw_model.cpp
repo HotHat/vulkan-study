@@ -13,6 +13,8 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
+#include "pipeline_manager.h"
+
 namespace lvk {
 DrawModel::DrawModel(RenderContext &context) : context(context) {
     // create_render_pass();
@@ -20,6 +22,44 @@ DrawModel::DrawModel(RenderContext &context) : context(context) {
     // allocator = std::make_unique<Allocator>(context.GetContext());
 
     // createDescriptorSet();
+    auto setLayout = DescriptorSetLayout::Builder(context.GetContext().device)
+                   .AddBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS)
+                   // .AddBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+                   .Build();
+
+    auto pipeline_ = Pipeline::Builder(context.GetContext())
+            .withShader("../shaders/ubo.vert.spv", "../shaders/ubo.frag.spv")
+            .withBindingDescription({
+                .binding = 0,
+                .stride = sizeof(Vertex2),
+                .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
+            })
+            .withVertexDescriptions(Vertex2::GetAttributeDescriptions())
+            .withDescriptorSetLayout(setLayout)
+            .build();
+
+    auto &manage = PipelineManage::Instance();
+    manage.Add("base_shader", std::make_unique<Pipeline>(std::move(pipeline_)));
+
+    // shader 2
+    auto setLayout2 = DescriptorSetLayout::Builder(context.GetContext().device)
+                .AddBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS)
+                .AddBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+                .Build();
+
+    auto pipeline2 = Pipeline::Builder(context.GetContext())
+            .withShader("../shaders/textures.vert.spv", "../shaders/textures.frag.spv")
+            .withBindingDescription({
+                .binding = 0,
+                .stride = sizeof(Vertex3),
+                .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
+            })
+            .withVertexDescriptions(Vertex3::GetAttributeDescriptions())
+            .withDescriptorSetLayout(setLayout2)
+            .build();
+
+    manage.Add("image_shader", std::make_unique<Pipeline>(std::move(pipeline2)));
+
     AddDrawObject();
 
     // draw_objects.emplace_back();
@@ -51,23 +91,24 @@ DrawModel::DrawModel(RenderContext &context) : context(context) {
 
 void DrawModel::AddDrawObject() {
     // CreateGraphicsPipeline2();
-    auto setLayout = DescriptorSetLayout::Builder(context.GetContext().device)
-                .AddBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS)
-                // .AddBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
-                .Build();
+    // auto setLayout = DescriptorSetLayout::Builder(context.GetContext().device)
+    //             .AddBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS)
+    //             // .AddBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+    //             .Build();
+    //
+    // auto pipeline_ = Pipeline::Builder(context.GetContext())
+    //         .withShader("../shaders/ubo.vert.spv", "../shaders/ubo.frag.spv")
+    //         .withBindingDescription({
+    //             .binding = 0,
+    //             .stride = sizeof(Vertex2),
+    //             .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
+    //         })
+    //         .withVertexDescriptions(Vertex2::GetAttributeDescriptions())
+    //         .withDescriptorSetLayout(setLayout)
+    //         .build();
 
-    auto pipeline_ = Pipeline::Builder(context.GetContext())
-            .withShader("../shaders/ubo.vert.spv", "../shaders/ubo.frag.spv")
-            .withBindingDescription({
-                .binding = 0,
-                .stride = sizeof(Vertex2),
-                .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
-            })
-            .withVertexDescriptions(Vertex2::GetAttributeDescriptions())
-            .withDescriptorSetLayout(setLayout)
-            .build();
-
-    auto draw_object = BaseDrawObject(pipeline_);
+    auto shadeId  = PipelineManage::Instance().Get("base_shader");
+    auto draw_object = BaseDrawObject(shadeId);
     // auto obj = static_cast<DrawObjectVector2>(draw_object);
     // draw_object.WithPipeline(pipeline_);
             // .WithPipelineLayout(pipeline_layout);
@@ -82,26 +123,12 @@ void DrawModel::AddDrawTextureObject(const std::string &image_path) {
     // texture->LoadImage("textures/texture.jpg");
     texture->LoadImage(image_path);
 
-    auto setLayout = DescriptorSetLayout::Builder(context.GetContext().device)
-                .AddBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS)
-                .AddBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
-                .Build();
-
-    auto pipeline_ = Pipeline::Builder(context.GetContext())
-            .withShader("../shaders/textures.vert.spv", "../shaders/textures.frag.spv")
-            .withBindingDescription({
-                .binding = 0,
-                .stride = sizeof(Vertex3),
-                .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
-            })
-            .withVertexDescriptions(Vertex3::GetAttributeDescriptions())
-            .withDescriptorSetLayout(setLayout)
-            .build();
 
     // auto draw_object = std::move(BaseDrawObject(pipeline_).WithTexture(texture));
-    auto draw_object = std::make_unique<BaseDrawObject>(pipeline_);
+
+    auto shadeId  = PipelineManage::Instance().Get("image_shader");
+    auto draw_object = std::make_unique<BaseDrawObject>(shadeId);
     draw_object->WithTexture(texture);
-    // auto &draw_object = BaseDrawObject(pipeline_).WithTexture(texture);
 
     draw_objects.emplace_back(std::move(draw_object));
 }
@@ -142,10 +169,10 @@ void DrawModel::LoadVertex() {
            .Build();
 
     for (auto const &object: draw_objects) {
-        uint32_t vertice_size = object->GetVertexDataSize();
+        uint32_t vertex_size = object->GetVertexDataSize();
         uint32_t indices_size = object->GetIndicesDataSize();
 
-        vertex_buffers[index] = context.GetAllocator().CreateBuffer(vertice_size,
+        vertex_buffers[index] = context.GetAllocator().CreateBuffer(vertex_size,
                                                                     VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
                                                                     VK_BUFFER_USAGE_TRANSFER_DST_BIT,
                                                                     VMA_MEMORY_USAGE_CPU_TO_GPU);
@@ -155,8 +182,8 @@ void DrawModel::LoadVertex() {
                                                                      VMA_MEMORY_USAGE_CPU_TO_GPU);
 
         //
-        vertex_buffers[index]->CopyData(vertice_size, const_cast<void *>(object->GetVertexData()));
-        vertex_buffers[index]->Flush(0, vertice_size);
+        vertex_buffers[index]->CopyData(vertex_size, const_cast<void *>(object->GetVertexData()));
+        vertex_buffers[index]->Flush(0, vertex_size);
 
         indices_buffers[index]->CopyData(indices_size, const_cast<void *>(object->GetIndicesData()));
         indices_buffers[index]->Flush(0, indices_size);
@@ -222,12 +249,12 @@ void DrawModel::Destroy() {
     descriptorPool->Cleanup();
     // descriptorSetLayout->Cleanup();
 
-    vkDeviceWaitIdle(context.GetContext().device.device);
+    // vkDeviceWaitIdle(context.GetContext().device.device);
     for (auto const &object: draw_objects) {
         object->Cleanup();
-        object->GetDescriptorSetLayout().Cleanup();
-        vkDestroyPipeline(context.GetContext().device.device, object->GetPipeline(), nullptr);
-        vkDestroyPipelineLayout(context.GetContext().device.device, object->GetPipelineLayout(), nullptr);
+        // object->GetDescriptorSetLayout().Cleanup();
+        // vkDestroyPipeline(context.GetContext().device.device, object->GetPipeline(), nullptr);
+        // vkDestroyPipelineLayout(context.GetContext().device.device, object->GetPipelineLayout(), nullptr);
     }
 }
 

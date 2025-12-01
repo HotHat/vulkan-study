@@ -10,19 +10,23 @@
 namespace lvk {
 class Pipeline {
 public:
-    Pipeline() {};
+    Pipeline() = default;
+
+    Pipeline(const Pipeline &other) = delete;
+
+    Pipeline &operator=(const Pipeline &) = delete;
 
     Pipeline &operator=(Pipeline &&other) noexcept {
         descriptorSetLayout = std::move(other.descriptorSetLayout);
-        pipelineLayout = std::move(other.pipelineLayout);
-        graphicsPipeline = std::move(other.graphicsPipeline);
+        pipelineLayout = other.pipelineLayout;
+        graphicsPipeline = other.graphicsPipeline;
         return *this;
     }
 
     Pipeline(Pipeline &&other) noexcept {
         descriptorSetLayout = std::move(other.descriptorSetLayout);
-        pipelineLayout = std::move(other.pipelineLayout);
-        graphicsPipeline = std::move(other.graphicsPipeline);
+        pipelineLayout = other.pipelineLayout;
+        graphicsPipeline = other.graphicsPipeline;
     }
 
     class Builder {
@@ -45,10 +49,12 @@ public:
             attributeDescriptions.push_back(description);
             return *this;
         }
-        Builder &withVertexDescriptions(std::vector<VkVertexInputAttributeDescription > descriptions) {
+
+        Builder &withVertexDescriptions(std::vector<VkVertexInputAttributeDescription> descriptions) {
             attributeDescriptions = std::move(descriptions);
             return *this;
         }
+
         Builder &withDescriptorSetLayout(std::unique_ptr<DescriptorSetLayout> &layout) {
             descriptorSetLayout = std::move(layout);
             return *this;
@@ -73,8 +79,7 @@ public:
     friend class Builder;
 
 public:
-
-    std::unique_ptr<DescriptorSetLayout> descriptorSetLayout;
+    std::unique_ptr<DescriptorSetLayout> descriptorSetLayout{};
     // std::unique_ptr<DescriptorPool> descriptorPool;
     // std::vector<VkDescriptorSet> descriptorSets;
 
