@@ -38,7 +38,7 @@ DrawModel::DrawModel(RenderContext &context) : context(context) {
             .withDescriptorSetLayout(setLayout)
             .build();
 
-    auto &manage = PipelineManage::Instance();
+    auto &manage = PipelineManager::Instance();
     manage.Add("base_shader", std::make_unique<Pipeline>(std::move(pipeline_)));
 
     // shader 2
@@ -107,7 +107,7 @@ void DrawModel::AddDrawObject() {
     //         .withDescriptorSetLayout(setLayout)
     //         .build();
 
-    auto shadeId  = PipelineManage::Instance().Get("base_shader");
+    auto shadeId  = PipelineManager::Instance().Get("base_shader");
     auto draw_object = BaseDrawObject(shadeId);
     // auto obj = static_cast<DrawObjectVector2>(draw_object);
     // draw_object.WithPipeline(pipeline_);
@@ -126,9 +126,17 @@ void DrawModel::AddDrawTextureObject(const std::string &image_path) {
 
     // auto draw_object = std::move(BaseDrawObject(pipeline_).WithTexture(texture));
 
-    auto shadeId  = PipelineManage::Instance().Get("image_shader");
+    auto shadeId  = PipelineManager::Instance().Get("image_shader");
     auto draw_object = std::make_unique<BaseDrawObject>(shadeId);
     draw_object->WithTexture(texture);
+
+    draw_objects.emplace_back(std::move(draw_object));
+}
+
+void DrawModel::AddDrawTextureId(TextureId textureId) {
+     auto shadeId  = PipelineManager::Instance().Get("image_shader");
+    auto draw_object = std::make_unique<BaseDrawObject>(shadeId);
+    draw_object->WithTextureId(textureId);
 
     draw_objects.emplace_back(std::move(draw_object));
 }
@@ -203,10 +211,10 @@ void DrawModel::LoadVertex() {
                     .WriteBuffer(0, &bufferInfo);
 
             if (object->HasTexture()) {
-                auto &texture = object->GetTexture();
+                auto texture = object->GetTexture();
                 auto textureInfo = VkDescriptorImageInfo{
-                    texture.GetSampler(),
-                    texture.GetImageView(),
+                    texture->GetSampler(),
+                    texture->GetImageView(),
                 };
 
                 textureInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;

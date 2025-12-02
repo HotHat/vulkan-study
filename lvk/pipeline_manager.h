@@ -12,17 +12,17 @@ namespace lvk {
 
 using ShaderId = size_t;
 
-class PipelineManage {
+class PipelineManager {
 public:
-    static PipelineManage & Instance() {
-        static PipelineManage instance;
+    static PipelineManager & Instance() {
+        static PipelineManager instance;
         return instance;
     }
 
-    PipelineManage(PipelineManage const &) = delete;
-    PipelineManage(PipelineManage &&) = delete;
-    PipelineManage & operator=(PipelineManage const &) = delete;
-    PipelineManage & operator=(PipelineManage &&) = delete;
+    PipelineManager(PipelineManager const &) = delete;
+    PipelineManager(PipelineManager &&) = delete;
+    PipelineManager & operator=(PipelineManager const &) = delete;
+    PipelineManager & operator=(PipelineManager &&) = delete;
 
     ShaderId Insert(std::unique_ptr<Pipeline> pipeline);
     ShaderId Add(std::string const &name, std::unique_ptr<Pipeline> pipeline);
@@ -50,7 +50,7 @@ public:
         return nameMap.at(name);
     }
 private:
-    PipelineManage() = default;
+    PipelineManager() = default;
     std::vector<std::unique_ptr<Pipeline > > pipelines{};
     std::unordered_map<std::string, size_t> nameMap{};
 };

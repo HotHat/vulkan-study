@@ -11,6 +11,7 @@
 #include <utility>
 
 #include "pipeline_manager.h"
+#include "texture_manager.h"
 
 namespace lvk {
 // RenderContext::RenderContext(VulkanContext &context_): context(context_) {}
@@ -115,9 +116,11 @@ void RenderContext::create_sync_objects() {
 }
 
 void RenderContext::Cleanup() {
-    //
+    // must before destroy allocator
+    TextureManager::Instance().Cleanup();
     allocator->Destroy();
-    PipelineManage::Instance().Cleanup(context.device.device);
+
+    PipelineManager::Instance().Cleanup(context.device.device);
 
     for (size_t i = 0; i < context.swapchain.image_count; i++) {
         vkDestroySemaphore(context.device.device, finished_semaphore[i], nullptr);

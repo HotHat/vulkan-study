@@ -44,6 +44,8 @@ set(PROJECT_FILES
         pipeline.h
         pipeline_manager.cpp
         pipeline_manager.h
+        texture_manager.cpp
+        texture_manager.h
 )
 
 #NB: switch this to shared library and things stop working. (there is likely two copies of volk somewhere.

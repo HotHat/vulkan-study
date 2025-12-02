@@ -12,6 +12,7 @@
 #include "pipeline.h"
 #include "pipeline_manager.h"
 #include "Texture.h"
+#include "texture_manager.h"
 #include "Vertex.h"
 
 namespace lvk {
@@ -29,6 +30,7 @@ struct BaseDrawObject {
         vertexesSize = other.vertexesSize;
         indices = std::move(other.indices);
         texture = std::move(other.texture);
+        textureId = other.textureId;
     }
 
     // Move assignment
@@ -38,13 +40,14 @@ struct BaseDrawObject {
         vertexesSize = other.vertexesSize;
         indices = std::move(other.indices);
         texture = std::move(other.texture);
+        textureId = other.textureId;
 
         return *this;
     }
 
     // BaseDrawObject &WithPipeline(Pipeline &pipeline_) {
-        // pipeline = std::move(pipeline_);
-        // return *this;
+    // pipeline = std::move(pipeline_);
+    // return *this;
     // };
 
     // BaseDrawObject &WithPipelineLayout(VkPipelineLayout layout) {
@@ -56,6 +59,12 @@ struct BaseDrawObject {
         texture = std::move(p_texture);
         return *this;
     };
+
+    BaseDrawObject &WithTextureId(TextureId _textureId) {
+        textureId = _textureId;
+        return *this;
+    };
+
 
     template<typename T>
     void AddTriangle(const T &t1, const T &t2, const T &t3) {
@@ -119,30 +128,36 @@ struct BaseDrawObject {
 
     uint32_t GetIndicesSize() const { return indices.size(); };
 
-    bool HasTexture() const { return texture != nullptr; };
+    bool HasTexture() const {
+        return textureId > 0;
+        // return texture != nullptr;
+    };
 
-    Texture &GetTexture() const { return *texture; };
+    [[nodiscard]] std::shared_ptr<Texture> GetTexture() const {
+        return TextureManager::Instance().Get(textureId);
+        // return *texture;
+    };
 
     VkPipeline GetPipeline() const {
-        auto &manage = PipelineManage::Instance();
+        auto &manage = PipelineManager::Instance();
         auto &pipeline = manage.Get(shaderId);
         return pipeline.graphicsPipeline;
     };
 
     DescriptorSetLayout &GetDescriptorSetLayout() const {
-        auto &pipeline = PipelineManage::Instance().Get(shaderId);
+        auto &pipeline = PipelineManager::Instance().Get(shaderId);
         return *pipeline.descriptorSetLayout;
     };
 
     VkPipelineLayout GetPipelineLayout() const {
-        auto &pipeline = PipelineManage::Instance().Get(shaderId);
+        auto &pipeline = PipelineManager::Instance().Get(shaderId);
         return pipeline.pipelineLayout;
     };
 
     void Cleanup() const {
-        if (texture) {
-            texture->Destroy();
-        }
+        // if (texture) {
+        //     texture->Destroy();
+        // }
     };
 
 protected:
@@ -164,6 +179,7 @@ protected:
 
     // VkImageView view = VK_NULL_HANDLE;
     std::unique_ptr<Texture> texture{};
+    TextureId textureId = 0;
 };
 
 /*

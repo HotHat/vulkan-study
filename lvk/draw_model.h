@@ -28,6 +28,7 @@ public:
     void AddDrawObject();
 
     void AddDrawTextureObject(const std::string &image_path);
+    void AddDrawTextureId(TextureId textureId);
 
     void LoadVertex();
 

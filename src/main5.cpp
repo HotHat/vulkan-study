@@ -17,6 +17,7 @@
 #include <glm/ext/matrix_transform.hpp>
 
 #include "draw_model.h"
+#include "texture_manager.h"
 
 
 struct Init {
@@ -114,6 +115,11 @@ int device_initialization(Init &init) {
 
     //
     init.render = std::make_unique<lvk::RenderContext>(*init.context);
+
+    lvk::TextureManager::Instance().InitContext(&(*init.render));
+    auto image1 = lvk::TextureManager::Instance().Add("../textures/texture.jpg");
+    auto image2 = lvk::TextureManager::Instance().Add("../textures/vulkan.png");
+
     init.model = std::make_unique<lvk::DrawModel>(*init.render);
     init.model->DrawRectangle({100.0f, 100.0f}, {100.0f, 100.0f}, {1.0f, 1.0f, 0.0f});
     init.model->DrawRectangle({250.0f, 100.0f}, {100.0f, 100.0f}, {0.0f, 1.0f, 1.0f});
@@ -121,12 +127,14 @@ int device_initialization(Init &init) {
 
     // init.model->AddDrawObject();
     // image 1
-    init.model->AddDrawTextureObject("../textures/texture.jpg");
+    // init.model->AddDrawTextureObject("../textures/texture.jpg");
+    init.model->AddDrawTextureId(image1);
     init.model->DrawRectangleUv({100.0f, 250.0f}, {100.0f, 100.0f}, {0.0f, 1.0f, 1.0f});
     init.model->DrawRectangleUv({250.0f, 250.0f}, {100.0f, 100.0f}, {0.0f, 1.0f, 1.0f});
     init.model->DrawRectangleUv({400.0f, 250.0f}, {100.0f, 100.0f}, {0.0f, 1.0f, 1.0f});
     // image 2
-    init.model->AddDrawTextureObject("../textures/vulkan.png");
+    // init.model->AddDrawTextureObject("../textures/vulkan.png");
+    init.model->AddDrawTextureId(image2);
     init.model->DrawRectangleUv({100.0f, 400.0f}, {100.0f, 100.0f}, {0.0f, 1.0f, 1.0f});
     init.model->DrawRectangleUv({250.0f, 400.0f}, {100.0f, 100.0f}, {0.0f, 1.0f, 1.0f});
     init.model->DrawRectangleUv({400.0f, 400.0f}, {100.0f, 100.0f}, {0.0f, 1.0f, 1.0f});
